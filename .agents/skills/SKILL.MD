@@ -10,7 +10,7 @@ Spotlight lets users discover concerts/events, pick seats or ticket tiers, and b
 ## Stack
 
 - **Backend**: Ruby on Rails (API-only mode), PostgreSQL
-- **Frontend**: React (SPA, consumes the Rails API over JSON)
+- **Frontend**: React (SPA, consumes the Rails API over JSON) + tailwindcss (always use it!)
 - **Auth**: token/session-based (JWT or Devise + JWT — confirm which before touching auth code)
 - **Background jobs**: Sidekiq (assumed — for things like email confirmations, hold-expiry cleanup)
 - **Payments**: external gateway (e.g. Stripe) — never log or persist raw card data
@@ -83,6 +83,8 @@ Concert ticketing has a few recurring hard parts. Model them explicitly rather t
 - Never log raw payment details (card numbers, CVV) anywhere, including error logs/Sentry breadcrumbs.
 - Any change touching Order/Ticket/Seat/Hold logic should call out how it affects concurrent-purchase safety in the PR description or commit message.
 
-Bonus rule:
+Bonus rules:
 
+- use 4 spaces identation instead of 2 everywhere.
 - never commit code by yourself to github or push; leave it to the programmer
+- for react, use tailwindcss for styling
