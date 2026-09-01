@@ -1,4 +1,5 @@
 import type { Order } from "../api/orders";
+import TicketQRCode from "./TicketQRCode";
 
 interface OrderConfirmationModalProps {
     order: Order;
@@ -73,14 +74,10 @@ export default function OrderConfirmationModal({
                                     </div>
                                 </div>
 
-                                {/* Right side SVG QR code & code */}
-                                <div className="flex flex-col items-center justify-center p-3 bg-white/5 border border-white/8 rounded-xl shrink-0 text-center">
-                                    {/* Mock SVG QR Code */}
-                                    <svg className="w-24 h-24 text-text-primary" viewBox="0 0 100 100" fill="none">
-                                        <rect width="100" height="100" fill="white" rx="4" />
-                                        <path fill="black" d="M10 10h30v30H10zM18 18h14v14H18zM60 10h30v30H60zM68 18h14v14H68zM10 60h30v30H10zM18 68h14v14H18zM50 50h10v10H50zM70 50h20v10H70zM50 70h10v20H50zM70 70h20v20H70zM60 80h10v10H60z" />
-                                    </svg>
-                                    <span className="font-mono text-[11px] font-bold text-gold tracking-widest mt-2">
+                                {/* Right side authentic QR code & code */}
+                                <div className="flex flex-col items-center justify-center p-3 bg-black/40 border border-white/8 rounded-xl shrink-0 text-center space-y-2">
+                                    <TicketQRCode code={t.ticket_code} size={110} />
+                                    <span className="font-mono text-[11px] font-bold text-gold tracking-widest">
                                         {t.ticket_code}
                                     </span>
                                 </div>

@@ -1,0 +1,26 @@
+SPOTLIGHT — CONCERT TICKETS CONFIRMED
+
+Hi <%= @user.first_name.presence || @user.email %>,
+
+Thank you for booking with Spotlight! Your order has been confirmed.
+
+ORDER SUMMARY
+-------------
+Order Ref: <%= @order.payment_reference %>
+Event: <%= @event.artist %> — <%= @event.title %>
+Date & Time: <%= @event.formatted_date %> at <%= @event.formatted_time %>
+Venue: <%= @event.venue.name %> (<%= @event.venue.location %>)
+Total Paid: $<%= sprintf('%.2f', @order.total_dollars) %>
+
+ISSUED TICKETS
+--------------
+<% @tickets.each_with_index do |ticket, idx| %>
+Ticket #<%= idx + 1 %>: <%= ticket.ticket_type.name %>
+Ticket Code: <%= ticket.ticket_code %>
+Status: <%= ticket.status.upcase %>
+----------------------------------
+<% end %>
+
+Present these codes at the venue entrance or access them anytime on Spotlight under My Tickets.
+
+Spotlight Portfolio Demo Project

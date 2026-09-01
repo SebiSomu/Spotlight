@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #08080e; color: #f3f3f6; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #12121c; border: 1px solid rgba(232, 168, 56, 0.3); border-radius: 16px; padding: 32px; }
+    .header { text-align: center; border-bottom: 1px solid #2a2a3a; padding-bottom: 24px; margin-bottom: 24px; }
+    .brand { color: #e8a838; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .title { font-size: 24px; font-weight: bold; margin-top: 8px; color: #ffffff; }
+    .order-info { background-color: #08080e; border: 1px solid #2a2a3a; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 14px; }
+    .ticket-card { background-color: #1a1a28; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .ticket-code { font-family: monospace; font-size: 18px; font-weight: bold; color: #e8a838; letter-spacing: 2px; text-align: center; background: #08080e; padding: 8px; border-radius: 6px; margin-top: 12px; }
+    .footer { text-align: center; font-size: 12px; color: #888899; margin-top: 32px; border-top: 1px solid #2a2a3a; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">Spotlight</div>
+      <div class="title">Your Ticket Order is Confirmed!</div>
+    </div>
+
+    <p>Hi <%= @user.first_name.presence || @user.email %>,</p>
+    <p>Thank you for booking with Spotlight. Your order has been processed successfully.</p>
+
+    <div class="order-info">
+      <div><strong>Order Reference:</strong> <%= @order.payment_reference %></div>
+      <div><strong>Event:</strong> <%= @event.artist %> — <%= @event.title %></div>
+      <div><strong>Date & Time:</strong> <%= @event.formatted_date %> at <%= @event.formatted_time %></div>
+      <div><strong>Venue:</strong> <%= @event.venue.name %> (<%= @event.venue.location %>)</div>
+      <div><strong>Total Amount Paid:</strong> $<%= sprintf('%.2f', @order.total_dollars) %></div>
+    </div>
+
+    <h3>Issued Digital Tickets</h3>
+    <% @tickets.each_with_index do |ticket, idx| %>
+      <div class="ticket-card">
+        <div><strong>Ticket #<%= idx + 1 %>:</strong> <%= ticket.ticket_type.name %></div>
+        <div><strong>Status:</strong> <%= ticket.status.upcase %></div>
+        <div class="ticket-code"><%= ticket.ticket_code %></div>
+      </div>
+    <% end %>
+
+    <p>Present these ticket codes at the venue entrance. You can also view your tickets anytime on the Spotlight website under <strong>My Tickets</strong>.</p>
+
+    <div class="footer">
+      <p>Spotlight Concert Ticket Booking Platform — Portfolio Demo Project</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 interface NavbarProps {
-    onNavigate?: (view: "home" | "events") => void;
-    currentView?: "home" | "events";
+    onNavigate?: (view: "home" | "events" | "my_tickets") => void;
+    currentView?: "home" | "events" | "my_tickets";
 }
 
 export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps) {
@@ -36,6 +36,14 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
     const handleEventsClick = (e: React.MouseEvent) => {
         e.preventDefault();
         onNavigate?.("events");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const handleMyTicketsClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setDropdownOpen(false);
+        setMobileOpen(false);
+        onNavigate?.("my_tickets");
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
@@ -117,17 +125,24 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                         Events
                     </a>
 
-                    <a
-                        href="#venues"
-                        onClick={handleEventsClick}
-                        className="font-body text-sm max-md:text-lg font-medium tracking-wide uppercase text-text-secondary no-underline px-4 py-2 max-md:py-3 rounded-md hover:text-text-primary hover:bg-white/5 transition-colors duration-200"
-                    >
-                        Venues
-                    </a>
+                    {user && (
+                        <a
+                            href="#my-tickets"
+                            onClick={handleMyTicketsClick}
+                            className={`font-body text-sm max-md:text-lg font-medium tracking-wide uppercase no-underline px-4 py-2 max-md:py-3 rounded-md transition-colors duration-200 ${
+                                currentView === "my_tickets"
+                                    ? "text-gold bg-white/5 font-semibold"
+                                    : "text-text-secondary hover:text-text-primary hover:bg-white/5"
+                            }`}
+                            id="nav-my-tickets-link"
+                        >
+                            My Tickets
+                        </a>
+                    )}
 
                     {user ? (
                         /* User Profile Dropdown */
-                        <div className="relative md:ml-4">
+                        <div className="relative md:ml-2">
                             <button
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
                                 className="flex items-center gap-2.5 bg-white/6 hover:bg-white/10 border border-white/10 rounded-full py-1.5 px-3.5 cursor-pointer transition-all duration-200"
@@ -154,6 +169,14 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                                             {user.email}
                                         </p>
                                     </div>
+
+                                    <button
+                                        onClick={handleMyTicketsClick}
+                                        className="w-full text-left flex items-center gap-2 px-4 py-2 font-body text-xs font-semibold text-text-primary hover:bg-white/5 border-none cursor-pointer transition-colors"
+                                        id="dropdown-my-tickets-btn"
+                                    >
+                                        My Tickets
+                                    </button>
 
                                     <button
                                         onClick={() => {

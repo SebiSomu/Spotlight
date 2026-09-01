@@ -73,6 +73,9 @@ module Orders
                 # 4. Mark Hold as converted (inventory was already decremented during hold creation)
                 hold.update!(status: "converted")
 
+                # 5. Enqueue confirmation email background job
+                SendOrderConfirmationEmailJob.perform_later(order.id)
+
                 result = { success: true, order: order }
             end
 

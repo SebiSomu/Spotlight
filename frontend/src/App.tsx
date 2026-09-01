@@ -7,11 +7,12 @@ import ExperienceShowcase from "./components/ExperienceShowcase";
 import TrendingEvents from "./components/TrendingEvents";
 import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
+import MyTicketsPage from "./pages/MyTicketsPage";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 
 function AppContent() {
-    const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail">("home");
+    const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail" | "my_tickets">("home");
     const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
     const handleSelectEvent = (eventId: number) => {
@@ -25,9 +26,17 @@ function AppContent() {
             <Navbar
                 onNavigate={(view) => {
                     setCurrentView(view);
-                    setSelectedEventId(null);
+                    if (view !== "event_detail") {
+                        setSelectedEventId(null);
+                    }
                 }}
-                currentView={currentView === "event_detail" ? "events" : currentView}
+                currentView={
+                    (currentView as string) === "event_detail"
+                        ? "events"
+                        : currentView === "my_tickets"
+                        ? "my_tickets"
+                        : currentView
+                }
             />
             <main>
                 {currentView === "home" ? (
@@ -41,6 +50,8 @@ function AppContent() {
                     </>
                 ) : currentView === "events" ? (
                     <EventsPage onSelectEvent={handleSelectEvent} />
+                ) : currentView === "my_tickets" ? (
+                    <MyTicketsPage onExploreClick={() => setCurrentView("events")} />
                 ) : selectedEventId ? (
                     <EventDetailPage
                         eventId={selectedEventId}
