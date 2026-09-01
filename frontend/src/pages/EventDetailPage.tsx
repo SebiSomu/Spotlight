@@ -63,29 +63,31 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
     useEffect(() => {
         if (!activeHold) return;
 
-        setSecondsRemaining(activeHold.seconds_remaining);
+        const expiresAtMs = new Date(activeHold.expires_at).getTime();
 
-        const interval = setInterval(() => {
-            setSecondsRemaining((prev) => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    setActiveHold(null);
-                    setHoldError(null);
-                    setIsCheckoutOpen(false);
-                    toast.error(
-                        "Hold Expired",
-                        "Your ticket reservation has expired. Please select tickets again."
-                    );
-                    // Re-fetch event to get updated quantities
-                    fetchEventByIdApi(eventId).then((res) => setEvent(res.event)).catch(() => {});
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+        const updateTimer = () => {
+            const nowMs = Date.now();
+            const diffSec = Math.max(0, Math.floor((expiresAtMs - nowMs) / 1000));
+            setSecondsRemaining(diffSec);
+
+            if (diffSec <= 0) {
+                setActiveHold(null);
+                setHoldError(null);
+                setIsCheckoutOpen(false);
+                toast.error(
+                    "Hold Expired",
+                    "Your ticket reservation has expired. Please select tickets again."
+                );
+                // Re-fetch event to get updated quantities
+                fetchEventByIdApi(eventId).then((res) => setEvent(res.event)).catch(() => {});
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
 
         return () => clearInterval(interval);
-    }, [activeHold, eventId, toast]);
+    }, [activeHold?.id, activeHold?.expires_at, eventId, toast]);
 
     const selectedTicketType: TicketType | undefined = event?.ticket_types?.find(
         (tt) => tt.id === selectedTicketTypeId

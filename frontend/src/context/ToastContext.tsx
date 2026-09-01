@@ -3,6 +3,7 @@ import {
     useContext,
     useState,
     useCallback,
+    useMemo,
     type ReactNode,
 } from "react";
 
@@ -49,14 +50,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         [removeToast],
     );
 
-    const toast = {
-        success: (title: string, message?: string) =>
-            showToast({ type: "success", title, message }),
-        error: (title: string, message?: string) =>
-            showToast({ type: "error", title, message }),
-        info: (title: string, message?: string) =>
-            showToast({ type: "info", title, message }),
-    };
+    const toast = useMemo(
+        () => ({
+            success: (title: string, message?: string) =>
+                showToast({ type: "success", title, message }),
+            error: (title: string, message?: string) =>
+                showToast({ type: "error", title, message }),
+            info: (title: string, message?: string) =>
+                showToast({ type: "info", title, message }),
+        }),
+        [showToast],
+    );
 
     return (
         <ToastContext.Provider
