@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_172546) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_175249) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_172546) do
     t.index ["starts_at"], name: "index_events_on_starts_at"
     t.index ["status"], name: "index_events_on_status"
     t.index ["venue_id"], name: "index_events_on_venue_id"
+  end
+
+  create_table "ticket_types", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "event_id", null: false
+    t.string "name"
+    t.integer "price_cents"
+    t.integer "quantity_available"
+    t.integer "quantity_remaining"
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_ticket_types_on_event_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -54,4 +65,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_172546) do
   end
 
   add_foreign_key "events", "venues"
+  add_foreign_key "ticket_types", "events"
 end

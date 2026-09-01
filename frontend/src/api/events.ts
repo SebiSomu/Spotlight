@@ -11,20 +11,31 @@ export interface Venue {
     image_url: string | null;
 }
 
+export interface TicketType {
+    id: number;
+    name: string;
+    price: number;
+    price_cents: number;
+    quantity_available: number;
+    quantity_remaining: number;
+    is_sold_out: boolean;
+}
+
 export interface EventItem {
     id: number;
     title: string;
     artist: string;
+    genre: string;
     description: string | null;
     starts_at: string;
     formatted_date: string;
     formatted_time: string;
-    genre: string;
     status: string;
     min_price: number;
     min_price_cents: number;
     image_url: string | null;
     venue: Venue;
+    ticket_types: TicketType[];
 }
 
 export interface EventsResponse {
@@ -38,7 +49,9 @@ export interface FetchEventsParams {
     genre?: string;
 }
 
-export async function fetchEventsApi(params: FetchEventsParams = {}): Promise<EventsResponse> {
+export async function fetchEventsApi(
+    params: FetchEventsParams = {},
+): Promise<EventsResponse> {
     const query = new URLSearchParams();
     if (params.search) query.set("search", params.search);
     if (params.date) query.set("date", params.date);
@@ -50,7 +63,9 @@ export async function fetchEventsApi(params: FetchEventsParams = {}): Promise<Ev
     });
 }
 
-export async function fetchEventByIdApi(id: number): Promise<{ event: EventItem }> {
+export async function fetchEventByIdApi(
+    id: number,
+): Promise<{ event: EventItem }> {
     return apiFetch<{ event: EventItem }>(`/events/${id}`, {
         method: "GET",
     });

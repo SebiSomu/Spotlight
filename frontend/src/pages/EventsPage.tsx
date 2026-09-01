@@ -40,7 +40,7 @@ const GENRE_BADGE: Record<string, string> = {
     "Electronic":          "text-[#38bdf8] bg-[#38bdf8]/10 border-[#38bdf8]/25",
 };
 
-export default function EventsPage() {
+export default function EventsPage({ onSelectEvent }: { onSelectEvent?: (id: number) => void }) {
     const [events, setEvents] = useState<EventItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -235,81 +235,90 @@ export default function EventsPage() {
                             return (
                                 <div
                                     key={event.id}
-                                    className="group bg-surface border border-white/6 hover:border-gold/20 rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+                                    onClick={() => onSelectEvent?.(event.id)}
+                                    className="group bg-surface border border-white/6 hover:border-gold/20 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between"
                                     id={`event-item-${event.id}`}
                                 >
-                                    {/* Image */}
-                                    <div className="relative aspect-[16/9] overflow-hidden shrink-0 bg-white/5">
-                                        <img
-                                            src={
-                                                event.image_url ||
-                                                "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80"
-                                            }
-                                            alt={event.artist}
-                                            referrerPolicy="no-referrer"
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-[#08080e]/90 via-transparent to-transparent" />
+                                    <div>
+                                        {/* Image */}
+                                        <div className="relative aspect-[16/9] overflow-hidden shrink-0 bg-white/5">
+                                            <img
+                                                src={
+                                                    event.image_url ||
+                                                    "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80"
+                                                }
+                                                alt={event.artist}
+                                                referrerPolicy="no-referrer"
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-[#08080e]/90 via-transparent to-transparent" />
 
-                                        {/* Genre pill on image */}
-                                        <span
-                                            className={`absolute top-3 left-3 font-body text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border backdrop-blur-sm ${badgeCls}`}
-                                        >
-                                            {event.genre}
-                                        </span>
+                                            {/* Genre pill on image */}
+                                            <span
+                                                className={`absolute top-3 left-3 font-body text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border backdrop-blur-sm ${badgeCls}`}
+                                            >
+                                                {event.genre}
+                                            </span>
 
-                                        {/* Price badge */}
-                                        <span className="absolute top-3 right-3 font-display text-xs font-bold text-gold bg-bg-primary/90 backdrop-blur-sm border border-gold/30 px-3 py-1 rounded-full">
-                                            From ${event.min_price}
-                                        </span>
+                                            {/* Price badge */}
+                                            <span className="absolute top-3 right-3 font-display text-xs font-bold text-gold bg-bg-primary/90 backdrop-blur-sm border border-gold/30 px-3 py-1 rounded-full">
+                                                From ${event.min_price}
+                                            </span>
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="p-6 flex flex-col flex-1">
+                                            <div className="flex items-center gap-2 mb-2 font-body text-xs text-text-secondary">
+                                                <span className="font-semibold text-gold">
+                                                    {event.formatted_date}
+                                                </span>
+                                                <span className="text-text-muted">-</span>
+                                                <span>{event.formatted_time}</span>
+                                            </div>
+
+                                            <h3 className="font-display text-xl font-bold tracking-tight text-text-primary mb-1 group-hover:text-gold transition-colors">
+                                                {event.artist}
+                                            </h3>
+                                            <p className="font-body text-sm font-medium text-text-secondary mb-3">
+                                                {event.title}
+                                            </p>
+                                            <p className="font-body text-xs text-text-muted leading-relaxed line-clamp-2 mb-4 flex-1">
+                                                {event.description}
+                                            </p>
+
+                                            {/* Venue row */}
+                                            <div className="flex items-center gap-2 pt-4 border-t border-white/6 font-body text-xs text-text-muted mb-5">
+                                                <svg
+                                                    className="w-4 h-4 text-gold shrink-0"
+                                                    viewBox="0 0 16 16"
+                                                    fill="none"
+                                                >
+                                                    <path
+                                                        d="M8 1.5C5.2 1.5 3 3.7 3 6.5C3 10.2 8 14.5 8 14.5C8 14.5 13 10.2 13 6.5C13 3.7 10.8 1.5 8 1.5ZM8 8C7.2 8 6.5 7.3 6.5 6.5C6.5 5.7 7.2 5 8 5C8.8 5 9.5 5.7 9.5 6.5C9.5 7.3 8.8 8 8 8Z"
+                                                        fill="currentColor"
+                                                    />
+                                                </svg>
+                                                <span className="truncate">
+                                                    <strong className="text-text-secondary">
+                                                        {event.venue.name}
+                                                    </strong>{" "}
+                                                    - {event.venue.city}, {event.venue.state}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* Content */}
-                                    <div className="p-6 flex flex-col flex-1">
-                                        <div className="flex items-center gap-2 mb-2 font-body text-xs text-text-secondary">
-                                            <span className="font-semibold text-gold">
-                                                {event.formatted_date}
-                                            </span>
-                                            <span className="text-text-muted">-</span>
-                                            <span>{event.formatted_time}</span>
-                                        </div>
-
-                                        <h3 className="font-display text-xl font-bold tracking-tight text-text-primary mb-1 group-hover:text-gold transition-colors">
-                                            {event.artist}
-                                        </h3>
-                                        <p className="font-body text-sm font-medium text-text-secondary mb-3">
-                                            {event.title}
-                                        </p>
-                                        <p className="font-body text-xs text-text-muted leading-relaxed line-clamp-2 mb-4 flex-1">
-                                            {event.description}
-                                        </p>
-
-                                        {/* Venue row */}
-                                        <div className="flex items-center gap-2 pt-4 border-t border-white/6 font-body text-xs text-text-muted mb-5">
-                                            <svg
-                                                className="w-4 h-4 text-gold shrink-0"
-                                                viewBox="0 0 16 16"
-                                                fill="none"
-                                            >
-                                                <path
-                                                    d="M8 1.5C5.2 1.5 3 3.7 3 6.5C3 10.2 8 14.5 8 14.5C8 14.5 13 10.2 13 6.5C13 3.7 10.8 1.5 8 1.5ZM8 8C7.2 8 6.5 7.3 6.5 6.5C6.5 5.7 7.2 5 8 5C8.8 5 9.5 5.7 9.5 6.5C9.5 7.3 8.8 8 8 8Z"
-                                                    fill="currentColor"
-                                                />
-                                            </svg>
-                                            <span className="truncate">
-                                                <strong className="text-text-secondary">
-                                                    {event.venue.name}
-                                                </strong>{" "}
-                                                - {event.venue.city}, {event.venue.state}
-                                            </span>
-                                        </div>
-
-                                        {/* CTA Button */}
+                                    {/* CTA Button */}
+                                    <div className="p-6 pt-0">
                                         <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onSelectEvent?.(event.id);
+                                            }}
                                             className="w-full font-body text-xs font-bold uppercase tracking-wider text-bg-primary bg-gold hover:bg-gold-hover py-3 rounded-lg border-none cursor-pointer transition-all shadow-md hover:shadow-gold/20 flex items-center justify-center gap-2"
                                             id={`buy-tickets-btn-${event.id}`}
                                         >
-                                            Select Seats
+                                            Select Seats / Tiers
                                             <svg
                                                 className="w-3.5 h-3.5"
                                                 viewBox="0 0 16 16"

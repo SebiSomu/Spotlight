@@ -1,5 +1,6 @@
 class Event < ApplicationRecord
     belongs_to :venue
+    has_many :ticket_types, dependent: :destroy
 
     STATUSES = %w[draft published cancelled sold_out].freeze
     GENRES = ["Reggaeton & Latin", "Hip-Hop & Rap", "Pop", "R&B", "Alternative & Rock", "Electronic"].freeze
@@ -42,7 +43,8 @@ class Event < ApplicationRecord
     }
 
     def min_price_dollars
-        (min_price_cents / 100.0).round(2)
+        min = ticket_types.minimum(:price_cents) || min_price_cents
+        (min / 100.0).round(2)
     end
 
     def formatted_date
@@ -67,7 +69,8 @@ class Event < ApplicationRecord
             min_price: min_price_dollars,
             min_price_cents: min_price_cents,
             image_url: image_url,
-            venue: venue.as_json_payload
+            venue: venue.as_json_payload,
+            ticket_types: ticket_types.order(price_cents: :asc).map(&:as_json_payload)
         }
     end
 end
