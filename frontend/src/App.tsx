@@ -3,6 +3,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import ExperienceShowcase from "./components/ExperienceShowcase";
 import TrendingEvents from "./components/TrendingEvents";
 import EventsPage from "./pages/EventsPage";
 import Footer from "./components/Footer";
@@ -18,6 +19,7 @@ function AppContent() {
                 {currentView === "home" ? (
                     <>
                         <Hero />
+                        <ExperienceShowcase />
                         <TrendingEvents onViewAllClick={() => setCurrentView("events")} />
                     </>
                 ) : (
