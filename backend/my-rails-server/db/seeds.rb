@@ -6,7 +6,7 @@ venues_data = [
         city: "San Juan",
         state: "PR",
         capacity: 35000,
-        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg"
+        image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuMZsTU_KPFa9TR8MgrSAnHv9JkE4LozaOULeYO_-jaQ&s=10"
     },
     {
         name: "Kaseya Center",
@@ -14,7 +14,7 @@ venues_data = [
         city: "Miami",
         state: "FL",
         capacity: 19600,
-        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg"
+        image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuMZsTU_KPFa9TR8MgrSAnHv9JkE4LozaOULeYO_-jaQ&s=10"
     },
     {
         name: "SoFi Stadium",
@@ -77,7 +77,7 @@ events_data = [
         starts_at: DateTime.new(2026, 9, 18, 20, 30, 0),
         status: "published",
         min_price_cents: 19500,
-        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg",
+        image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuMZsTU_KPFa9TR8MgrSAnHv9JkE4LozaOULeYO_-jaQ&s=10",
         venue: venues_by_name["Estadio Hiram Bithorn"]
     },
     {
@@ -88,7 +88,7 @@ events_data = [
         starts_at: DateTime.new(2026, 10, 2, 21, 0, 0),
         status: "published",
         min_price_cents: 22000,
-        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg",
+        image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuMZsTU_KPFa9TR8MgrSAnHv9JkE4LozaOULeYO_-jaQ&s=10",
         venue: venues_by_name["Kaseya Center"]
     },
     {
@@ -153,4 +153,4 @@ events_data.each do |data|
     e.update!(data)
 end
 
-puts "Seeded #{Event.count} published events with recent Bad Bunny photo!"
+puts "Seeded #{Event.count} published events with user's specific Bad Bunny photo!"
