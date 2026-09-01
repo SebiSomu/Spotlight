@@ -32,10 +32,3 @@
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
-
-# IDE and OS files
-.idea/
-.vscode/
-.DS_Store
-Thumbs.db
-
