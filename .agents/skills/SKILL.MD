@@ -29,7 +29,8 @@ spotlight/
 │   │   ├── services/        # booking, payment, seat-hold logic lives here, not in controllers
 │   │   └── jobs/
 │   ├── db/migrate/
-│   ├── db/seeds.rb          # real artist/venue seed data — see "Seeding artists & venues" below
+│   ├── db/data/seeds_data.json # external JSON seed dataset for venues, events, and ticket types
+│   ├── db/seeds.rb          # parses db/data/seeds_data.json idempotently
 │   ├── lib/tasks/           # custom rake tasks (e.g. fetch_artist_images.rake)
 │   └── spec/                # RSpec
 └── frontend/                 # React app
@@ -72,7 +73,8 @@ When populating Artist and Venue records (seeds, fixtures, or ad-hoc data entry 
 - **Image Extraction Task**: Use `lib/tasks/fetch_artist_images.rake` (`bundle exec rails events:fetch_artist_images`) to automatically extract, fetch, and update official artist profile photos for event records across the codebase.
 - Never scrape or hotlink images from unofficial fan sites, social media reposts, or search-engine image results — stick to the artist/venue's own official source.
 - If a real photo genuinely can't be sourced for a given artist/venue, leave the image field blank / use a neutral placeholder rather than substituting an unrelated or unverified image.
-- Seed scripts (`db/seeds.rb` or dedicated rake tasks) should be idempotent — safe to re-run without duplicating artists/venues (`find_or_create_by` on a unique attribute like name+city, or an external ID from the source API).
+- **External JSON Seed Dataset**: Store seed records in `db/data/seeds_data.json` rather than hardcoding arrays directly inside `db/seeds.rb`. Always validate and verify ticket prices, tier names, capacities, and venue addresses against real sources (Ticketmaster, official venue sites, Spotify API) before writing into `db/data/seeds_data.json`.
+- **Idempotent Seeds**: `db/seeds.rb` should parse `db/data/seeds_data.json` and use `find_or_initialize_by` on unique attributes (`name` for venues, `title` + `artist` for events, `name` for ticket types) so re-running seeds is safe and non-duplicating.
 
 ## Conventions
 
