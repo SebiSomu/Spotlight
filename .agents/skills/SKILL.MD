@@ -10,7 +10,7 @@ Spotlight lets users discover concerts/events, pick seats or ticket tiers, and b
 ## Stack
 
 - **Backend**: Ruby on Rails (API-only mode), PostgreSQL
-- **Frontend**: React (SPA, consumes the Rails API over JSON) + tailwindcss (always use it!)
+- **Frontend**: React (SPA, consumes the Rails API over JSON) + Tailwind CSS (always use it!)
 - **Auth**: token/session-based (JWT or Devise + JWT — confirm which before touching auth code)
 - **Background jobs**: Sidekiq (assumed — for things like email confirmations, hold-expiry cleanup)
 - **Payments**: external gateway (e.g. Stripe) — never log or persist raw card data
@@ -29,6 +29,7 @@ spotlight/
 │   │   ├── services/        # booking, payment, seat-hold logic lives here, not in controllers
 │   │   └── jobs/
 │   ├── db/migrate/
+│   ├── db/seeds.rb          # real artist/venue seed data — see "Seeding artists & venues" below
 │   └── spec/                # RSpec
 └── frontend/                 # React app
     ├── src/
@@ -60,6 +61,17 @@ Concert ticketing has a few recurring hard parts. Model them explicitly rather t
 - Wrap hold creation, payment confirmation, and ticket issuance in a single DB transaction per order.
 - Expire holds via a scheduled job, not just client-side timers.
 
+## Seeding artists & venues with real data
+
+When populating Artist and Venue records (seeds, fixtures, or ad-hoc data entry during feature work), agents should insert **real, accurate data** rather than placeholder/fake entries — this keeps the app demoable and realistic:
+
+- **Artists**: real name, genre(s), and a short real bio. Don't invent fictional bands unless the task explicitly asks for test/dummy data.
+- **Venues**: real venue name, real address/city, and a real (or realistic, sourced) capacity — don't fabricate an address.
+- **Photos**: source artist images from an official/authorized source — the Spotify Web API's artist images endpoint is the preferred source (it's built for this and returns properly licensed CDN URLs), or another official profile (the artist's/venue's own verified page) if Spotify doesn't have the act. Store the image **URL**, not a downloaded/embedded copy of the file, so the app is always pointing at the source's own hosting rather than a redistributed copy.
+- Never scrape or hotlink images from unofficial fan sites, social media reposts, or search-engine image results — stick to the artist/venue's own official source.
+- If a real photo genuinely can't be sourced for a given artist/venue, leave the image field blank / use a neutral placeholder rather than substituting an unrelated or unverified image.
+- Seed scripts (`db/seeds.rb` or dedicated rake tasks) should be idempotent — safe to re-run without duplicating artists/venues (`find_or_create_by` on a unique attribute like name+city, or an external ID from the source API).
+
 ## Conventions
 
 **Rails (backend)**
@@ -75,16 +87,31 @@ Concert ticketing has a few recurring hard parts. Model them explicitly rather t
 
 - Components are functional with hooks; no class components.
 - All API calls go through the `src/api/` client layer — no raw `fetch`/`axios` calls scattered in components.
+- Use Tailwind CSS for all styling — no separate CSS files or inline style objects unless Tailwind genuinely can't express it.
 - Keep checkout/seat-hold countdown state close to where it's used; don't let a stale hold silently show as "still reserved" in the UI after it expires server-side — poll or trust a server-provided expiry timestamp, not a client-only timer.
 - Loading and error states are required for anything that hits the network (event listings, seat maps, checkout) — never leave a bare blank screen on failure.
 
 **General**
 
+- Use 4-space indentation everywhere (both Ruby and JS/JSX) — not the language's typical 2-space default.
+- Never insert emojis in code, comments, or commit messages; remove any that show up.
 - Never log raw payment details (card numbers, CVV) anywhere, including error logs/Sentry breadcrumbs.
 - Any change touching Order/Ticket/Seat/Hold logic should call out how it affects concurrent-purchase safety in the PR description or commit message.
 
-Bonus rules:
+## Working with Antigravity
 
-- use 4 spaces identation instead of 2 everywhere.
-- never commit code by yourself to github or push; leave it to the programmer
-- for react, use tailwindcss for styling
+When Antigravity (or another agent) picks up this skill for a task:
+
+1. Confirm which parts of the "Stack" and "Repository layout" sections above still match the actual repo before assuming them — they're defaults, not verified facts, until checked against `Gemfile`, `package.json`, and the real directory tree.
+2. Prefer extending existing service objects / API endpoints over creating parallel ones for the same concern.
+3. For anything touching purchase/seat/hold flows, write or update tests alongside the change — this is the area most likely to have subtle concurrency bugs.
+4. Keep frontend and backend changes in the same PR when they implement one feature (e.g. a new endpoint + the component that calls it), so the API contract doesn't drift.
+5. **Never commit or push code on your own** — make the changes and leave committing/pushing to the programmer.
+
+## Open items to fill in as the project solidifies
+
+- [ ] Confirm auth approach (Devise+JWT vs custom) and document token refresh flow
+- [ ] Confirm payment gateway and webhook handling approach
+- [ ] Confirm whether venues use reserved seating, GA-only, or both (affects Seat model necessity)
+- [ ] Document deployment target (Heroku/Render/Fly/AWS) and CI setup once decided
+- [ ] Add real directory tree once repo exists, replacing the "expected" layout above

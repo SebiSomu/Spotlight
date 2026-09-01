@@ -107,7 +107,9 @@ export default function ExperienceShowcase() {
                 <div className="mt-12 bg-surface/40 border border-white/6 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 backdrop-blur-md">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-gold font-display text-xl font-bold shrink-0">
-                            ⚡
+                            <svg className="w-6 h-6 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
                         </div>
                         <div>
                             <h4 className="font-display text-base sm:text-lg font-bold text-text-primary">

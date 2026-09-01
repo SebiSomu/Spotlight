@@ -30,13 +30,14 @@ function EventCard({ event, index }: { event: EventItem; index: number }) {
             id={`event-card-${event.id}`}
         >
             {/* Image Wrap */}
-            <div className="relative aspect-[16/9] sm:aspect-[3/3.5] overflow-hidden">
+            <div className="relative aspect-[16/9] sm:aspect-[3/3.5] overflow-hidden bg-white/5">
                 <img
                     src={
                         event.image_url ||
                         "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80"
                     }
                     alt={`${event.artist} live concert`}
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-106"
                     loading="lazy"
                 />

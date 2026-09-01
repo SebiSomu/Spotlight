@@ -115,7 +115,7 @@ export default function EventsPage() {
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search artist, show, venue or city…"
+                                placeholder="Search artist, show, venue or city..."
                                 className="w-full bg-bg-primary/90 border border-white/10 focus:border-gold/50 focus:outline-none rounded-xl pl-11 pr-10 py-3 font-body text-sm text-text-primary placeholder:text-text-muted/60 transition-colors"
                                 id="events-search-input"
                             />
@@ -124,7 +124,7 @@ export default function EventsPage() {
                                     onClick={() => setSearch("")}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-1 bg-transparent border-none cursor-pointer text-xs"
                                 >
-                                    ✕
+                                    x
                                 </button>
                             )}
                         </div>
@@ -164,7 +164,7 @@ export default function EventsPage() {
                                     date && `on ${date}`,
                                 ]
                                     .filter(Boolean)
-                                    .join(" · ")}
+                                    .join(" - ")}
                             </span>
                         )}
                     </div>
@@ -203,8 +203,11 @@ export default function EventsPage() {
                     </div>
                 ) : events.length === 0 ? (
                     <div className="text-center py-20 bg-surface/30 border border-white/5 rounded-2xl">
-                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 text-2xl">
-                            🔍
+                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 text-text-muted">
+                            <svg className="w-6 h-6 text-gold" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <circle cx="9" cy="9" r="6.5" />
+                                <path d="M13.5 13.5L17.5 17.5" strokeLinecap="round" />
+                            </svg>
                         </div>
                         <h3 className="font-display text-xl font-bold text-text-primary mb-2">
                             No shows match your criteria
@@ -236,13 +239,14 @@ export default function EventsPage() {
                                     id={`event-item-${event.id}`}
                                 >
                                     {/* Image */}
-                                    <div className="relative aspect-[16/9] overflow-hidden shrink-0">
+                                    <div className="relative aspect-[16/9] overflow-hidden shrink-0 bg-white/5">
                                         <img
                                             src={
                                                 event.image_url ||
                                                 "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80"
                                             }
                                             alt={event.artist}
+                                            referrerPolicy="no-referrer"
                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-[#08080e]/90 via-transparent to-transparent" />
@@ -266,7 +270,7 @@ export default function EventsPage() {
                                             <span className="font-semibold text-gold">
                                                 {event.formatted_date}
                                             </span>
-                                            <span className="text-text-muted">·</span>
+                                            <span className="text-text-muted">-</span>
                                             <span>{event.formatted_time}</span>
                                         </div>
 
@@ -296,7 +300,7 @@ export default function EventsPage() {
                                                 <strong className="text-text-secondary">
                                                     {event.venue.name}
                                                 </strong>{" "}
-                                                — {event.venue.city}, {event.venue.state}
+                                                - {event.venue.city}, {event.venue.state}
                                             </span>
                                         </div>
 

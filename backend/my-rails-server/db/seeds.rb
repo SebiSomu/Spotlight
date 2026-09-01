@@ -1,75 +1,74 @@
-# Clear existing data in correct order
-Event.destroy_all
-Venue.destroy_all
+# Seed venues idempotently
+venues_data = [
+    {
+        name: "Estadio Hiram Bithorn",
+        address: "FDR Ave & Roosevelt Ave",
+        city: "San Juan",
+        state: "PR",
+        capacity: 35000,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg"
+    },
+    {
+        name: "Kaseya Center",
+        address: "601 Biscayne Blvd",
+        city: "Miami",
+        state: "FL",
+        capacity: 19600,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg"
+    },
+    {
+        name: "SoFi Stadium",
+        address: "1001 Stadium Dr",
+        city: "Inglewood",
+        state: "CA",
+        capacity: 70000,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png/960px-Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png"
+    },
+    {
+        name: "Barclays Center",
+        address: "620 Atlantic Ave",
+        city: "Brooklyn",
+        state: "NY",
+        capacity: 19000,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/1/15/Drake_at_The_Carter_Effect_2017_%2836818935200%29_%28cropped%29.jpg"
+    },
+    {
+        name: "Chase Center",
+        address: "1 Warriors Way",
+        city: "San Francisco",
+        state: "CA",
+        capacity: 18064,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/c/c7/BillieEilishO2140725-39_-_54665577407_%28cropped%29.jpg"
+    },
+    {
+        name: "MetLife Stadium",
+        address: "1 MetLife Stadium Dr",
+        city: "East Rutherford",
+        state: "NJ",
+        capacity: 82500,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/The_Weeknd_Portrait_by_Brian_Ziff.jpg/960px-The_Weeknd_Portrait_by_Brian_Ziff.jpg"
+    },
+    {
+        name: "Rose Bowl Stadium",
+        address: "1001 Rose Bowl Dr",
+        city: "Pasadena",
+        state: "CA",
+        capacity: 90888,
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/ColdplayWembley120925_%28cropped%29.jpg/960px-ColdplayWembley120925_%28cropped%29.jpg"
+    }
+]
 
-puts "Seeding venues for real artists..."
+venues_by_name = {}
+venues_data.each do |data|
+    v = Venue.find_or_initialize_by(name: data[:name])
+    v.update!(data)
+    venues_by_name[data[:name]] = v
+end
 
-hiram = Venue.create!(
-    name: "Estadio Hiram Bithorn",
-    address: "FDR Ave & Roosevelt Ave",
-    city: "San Juan",
-    state: "PR",
-    capacity: 35000,
-    image_url: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80"
-)
+puts "Seeded #{venues_by_name.size} venues."
 
-kaseya = Venue.create!(
-    name: "Kaseya Center",
-    address: "601 Biscayne Blvd",
-    city: "Miami",
-    state: "FL",
-    capacity: 19600,
-    image_url: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80"
-)
-
-sofi = Venue.create!(
-    name: "SoFi Stadium",
-    address: "1001 Stadium Dr",
-    city: "Inglewood",
-    state: "CA",
-    capacity: 70000,
-    image_url: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80"
-)
-
-barclays = Venue.create!(
-    name: "Barclays Center",
-    address: "620 Atlantic Ave",
-    city: "Brooklyn",
-    state: "NY",
-    capacity: 19000,
-    image_url: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80"
-)
-
-chase = Venue.create!(
-    name: "Chase Center",
-    address: "1 Warriors Way",
-    city: "San Francisco",
-    state: "CA",
-    capacity: 18064,
-    image_url: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80"
-)
-
-metlife = Venue.create!(
-    name: "MetLife Stadium",
-    address: "1 MetLife Stadium Dr",
-    city: "East Rutherford",
-    state: "NJ",
-    capacity: 82500,
-    image_url: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80"
-)
-
-rose_bowl = Venue.create!(
-    name: "Rose Bowl Stadium",
-    address: "1001 Rose Bowl Dr",
-    city: "Pasadena",
-    state: "CA",
-    capacity: 90888,
-    image_url: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80"
-)
-
-puts "Seeding published events with real world-famous artists..."
-
-Event.create!([
+# Seed events idempotently
+events_data = [
     {
         title: "DeBí TiRAR MáS FOToS World Tour",
         artist: "Bad Bunny",
@@ -78,8 +77,8 @@ Event.create!([
         starts_at: DateTime.new(2026, 9, 18, 20, 30, 0),
         status: "published",
         min_price_cents: 19500,
-        image_url: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80",
-        venue: hiram
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg",
+        venue: venues_by_name["Estadio Hiram Bithorn"]
     },
     {
         title: "Most Wanted Stadium Experience",
@@ -89,8 +88,8 @@ Event.create!([
         starts_at: DateTime.new(2026, 10, 2, 21, 0, 0),
         status: "published",
         min_price_cents: 22000,
-        image_url: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80",
-        venue: kaseya
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg",
+        venue: venues_by_name["Kaseya Center"]
     },
     {
         title: "The Eras Tour (Extended Show)",
@@ -100,8 +99,8 @@ Event.create!([
         starts_at: DateTime.new(2026, 9, 25, 19, 0, 0),
         status: "published",
         min_price_cents: 28000,
-        image_url: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80",
-        venue: sofi
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png/960px-Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png",
+        venue: venues_by_name["SoFi Stadium"]
     },
     {
         title: "It's All A Blur Tour",
@@ -111,8 +110,8 @@ Event.create!([
         starts_at: DateTime.new(2026, 10, 10, 20, 0, 0),
         status: "published",
         min_price_cents: 21000,
-        image_url: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
-        venue: barclays
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/1/15/Drake_at_The_Carter_Effect_2017_%2836818935200%29_%28cropped%29.jpg",
+        venue: venues_by_name["Barclays Center"]
     },
     {
         title: "Hit Me Hard and Soft: Live",
@@ -122,8 +121,8 @@ Event.create!([
         starts_at: DateTime.new(2026, 10, 24, 19, 30, 0),
         status: "published",
         min_price_cents: 14500,
-        image_url: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80",
-        venue: chase
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/c/c7/BillieEilishO2140725-39_-_54665577407_%28cropped%29.jpg",
+        venue: venues_by_name["Chase Center"]
     },
     {
         title: "After Hours til Dawn Stadium Tour",
@@ -133,8 +132,8 @@ Event.create!([
         starts_at: DateTime.new(2026, 11, 5, 20, 0, 0),
         status: "published",
         min_price_cents: 17500,
-        image_url: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80",
-        venue: metlife
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/The_Weeknd_Portrait_by_Brian_Ziff.jpg/960px-The_Weeknd_Portrait_by_Brian_Ziff.jpg",
+        venue: venues_by_name["MetLife Stadium"]
     },
     {
         title: "Music of the Spheres World Tour",
@@ -144,9 +143,14 @@ Event.create!([
         starts_at: DateTime.new(2026, 11, 14, 19, 0, 0),
         status: "published",
         min_price_cents: 16000,
-        image_url: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80",
-        venue: rose_bowl
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/ColdplayWembley120925_%28cropped%29.jpg/960px-ColdplayWembley120925_%28cropped%29.jpg",
+        venue: venues_by_name["Rose Bowl Stadium"]
     }
-])
+]
 
-puts "Database seeded with real artists! Total venues: #{Venue.count}, total events: #{Event.count}."
+events_data.each do |data|
+    e = Event.find_or_initialize_by(title: data[:title], artist: data[:artist])
+    e.update!(data)
+end
+
+puts "Seeded #{Event.count} published events with recent Bad Bunny photo!"
