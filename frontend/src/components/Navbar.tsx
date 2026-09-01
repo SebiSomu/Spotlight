@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 interface NavbarProps {
-    onNavigate?: (view: "home" | "events" | "my_tickets" | "event_detail") => void;
-    currentView?: "home" | "events" | "my_tickets" | "event_detail";
+    onNavigate?: (view: "home" | "events" | "dashboard" | "event_detail") => void;
+    currentView?: "home" | "events" | "dashboard" | "event_detail";
 }
 
 export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps) {
@@ -39,11 +39,11 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const handleMyTicketsClick = (e: React.MouseEvent) => {
+    const handleDashboardClick = (e: React.MouseEvent) => {
         e.preventDefault();
         setDropdownOpen(false);
         setMobileOpen(false);
-        onNavigate?.("my_tickets");
+        onNavigate?.("dashboard");
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
@@ -130,7 +130,9 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                         <div className="relative md:ml-2">
                             <button
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                                className="flex items-center gap-2.5 bg-white/6 hover:bg-white/10 border border-white/10 rounded-full py-1.5 px-3.5 cursor-pointer transition-all duration-200"
+                                className={`flex items-center gap-2.5 bg-white/6 hover:bg-white/10 border rounded-full py-1.5 px-3.5 cursor-pointer transition-all duration-200 ${
+                                    currentView === "dashboard" ? "border-gold bg-gold/10" : "border-white/10"
+                                }`}
                                 id="user-profile-btn"
                             >
                                 <div className="w-6 h-6 rounded-full bg-gold text-bg-primary font-display font-bold text-xs flex items-center justify-center">
@@ -145,7 +147,7 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                             </button>
 
                             {dropdownOpen && (
-                                <div className="absolute right-0 mt-2 w-48 bg-surface border border-white/10 rounded-xl shadow-2xl py-2 z-50">
+                                <div className="absolute right-0 mt-2 w-52 bg-surface border border-white/10 rounded-xl shadow-2xl py-2 z-50">
                                     <div className="px-4 py-2 border-b border-white/6">
                                         <p className="font-body text-xs font-semibold text-text-primary truncate">
                                             {user.full_name || "Spotlight User"}
@@ -156,11 +158,15 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                                     </div>
 
                                     <button
-                                        onClick={handleMyTicketsClick}
-                                        className="w-full text-left flex items-center gap-2 px-4 py-2 font-body text-xs font-semibold text-text-primary hover:bg-white/5 border-none cursor-pointer transition-colors"
-                                        id="dropdown-my-tickets-btn"
+                                        onClick={handleDashboardClick}
+                                        className="w-full text-left flex items-center gap-2 px-4 py-2.5 font-body text-xs font-semibold text-text-primary hover:bg-white/5 border-none cursor-pointer transition-colors"
+                                        id="dropdown-dashboard-btn"
                                     >
-                                        My Tickets
+                                        <svg className="w-3.5 h-3.5 text-gold" viewBox="0 0 16 16" fill="none">
+                                            <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.2" />
+                                            <path d="M2 7h12" stroke="currentColor" strokeWidth="1.2" />
+                                        </svg>
+                                        My Dashboard & Tickets
                                     </button>
 
                                     <button
@@ -169,7 +175,7 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                                             setDropdownOpen(false);
                                             setMobileOpen(false);
                                         }}
-                                        className="w-full text-left flex items-center gap-2 px-4 py-2 font-body text-xs font-semibold text-crimson hover:bg-crimson/10 border-none cursor-pointer transition-colors"
+                                        className="w-full text-left flex items-center gap-2 px-4 py-2 font-body text-xs font-semibold text-crimson hover:bg-crimson/10 border-none cursor-pointer transition-colors border-t border-white/6"
                                         id="sign-out-btn"
                                     >
                                         Sign Out

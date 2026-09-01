@@ -19,6 +19,8 @@ class Ticket < ApplicationRecord
             ticket_type_name: ticket_type.name,
             event_title: ticket_type.event.title,
             artist: ticket_type.event.artist,
+            genre: ticket_type.event.genre,
+            event_image_url: ticket_type.event.image_url,
             venue_name: ticket_type.event.venue.name,
             formatted_date: ticket_type.event.formatted_date,
             formatted_time: ticket_type.event.formatted_time,

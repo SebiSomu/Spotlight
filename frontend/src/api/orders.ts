@@ -7,6 +7,8 @@ export interface Ticket {
     ticket_type_name: string;
     event_title: string;
     artist: string;
+    genre?: string;
+    event_image_url?: string;
     venue_name: string;
     formatted_date: string;
     formatted_time: string;

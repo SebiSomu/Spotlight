@@ -7,12 +7,12 @@ import ExperienceShowcase from "./components/ExperienceShowcase";
 import TrendingEvents from "./components/TrendingEvents";
 import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
-import MyTicketsPage from "./pages/MyTicketsPage";
+import UserDashboardPage from "./pages/UserDashboardPage";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 
 function AppContent() {
-    const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail" | "my_tickets">("home");
+    const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail" | "dashboard">("home");
     const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
     const handleSelectEvent = (eventId: number) => {
@@ -44,8 +44,8 @@ function AppContent() {
                     </>
                 ) : currentView === "events" ? (
                     <EventsPage onSelectEvent={handleSelectEvent} />
-                ) : currentView === "my_tickets" ? (
-                    <MyTicketsPage onExploreClick={() => setCurrentView("events")} />
+                ) : currentView === "dashboard" ? (
+                    <UserDashboardPage onExploreClick={() => setCurrentView("events")} />
                 ) : selectedEventId ? (
                     <EventDetailPage
                         eventId={selectedEventId}
