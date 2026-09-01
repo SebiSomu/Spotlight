@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 interface NavbarProps {
-    onNavigate?: (view: "home" | "events" | "my_tickets") => void;
-    currentView?: "home" | "events" | "my_tickets";
+    onNavigate?: (view: "home" | "events" | "my_tickets" | "event_detail") => void;
+    currentView?: "home" | "events" | "my_tickets" | "event_detail";
 }
 
 export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps) {
@@ -124,21 +124,6 @@ export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps
                     >
                         Events
                     </a>
-
-                    {user && (
-                        <a
-                            href="#my-tickets"
-                            onClick={handleMyTicketsClick}
-                            className={`font-body text-sm max-md:text-lg font-medium tracking-wide uppercase no-underline px-4 py-2 max-md:py-3 rounded-md transition-colors duration-200 ${
-                                currentView === "my_tickets"
-                                    ? "text-gold bg-white/5 font-semibold"
-                                    : "text-text-secondary hover:text-text-primary hover:bg-white/5"
-                            }`}
-                            id="nav-my-tickets-link"
-                        >
-                            My Tickets
-                        </a>
-                    )}
 
                     {user ? (
                         /* User Profile Dropdown */

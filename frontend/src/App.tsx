@@ -30,13 +30,7 @@ function AppContent() {
                         setSelectedEventId(null);
                     }
                 }}
-                currentView={
-                    (currentView as string) === "event_detail"
-                        ? "events"
-                        : currentView === "my_tickets"
-                        ? "my_tickets"
-                        : currentView
-                }
+                currentView={currentView}
             />
             <main>
                 {currentView === "home" ? (
