@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
-const navLinks = [
-    { label: "Events", href: "#events" },
-    { label: "Artists", href: "#artists" },
-    { label: "Venues", href: "#venues" },
-    { label: "My Tickets", href: "#tickets" },
-];
+interface NavbarProps {
+    onNavigate?: (view: "home" | "events") => void;
+    currentView?: "home" | "events";
+}
 
-export default function Navbar() {
+export default function Navbar({ onNavigate, currentView = "home" }: NavbarProps) {
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -29,6 +27,18 @@ export default function Navbar() {
         return user.email.substring(0, 2).toUpperCase();
     };
 
+    const handleBrandClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        onNavigate?.("home");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const handleEventsClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        onNavigate?.("events");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
     return (
         <nav
             className={`fixed top-0 left-0 right-0 z-50 px-5 md:px-10 lg:px-12 transition-all duration-350 ease-in-out ${
@@ -42,7 +52,8 @@ export default function Navbar() {
                 {/* Brand */}
                 <a
                     href="/"
-                    className="flex items-center gap-2.5 no-underline text-text-primary group"
+                    onClick={handleBrandClick}
+                    className="flex items-center gap-2.5 no-underline text-text-primary group cursor-pointer"
                     id="brand-link"
                 >
                     <svg
@@ -53,22 +64,8 @@ export default function Navbar() {
                         aria-hidden="true"
                     >
                         <circle cx="14" cy="14" r="6" fill="#e8a838" />
-                        <circle
-                            cx="14"
-                            cy="14"
-                            r="10"
-                            stroke="#e8a838"
-                            strokeWidth="1.5"
-                            opacity="0.4"
-                        />
-                        <circle
-                            cx="14"
-                            cy="14"
-                            r="13.5"
-                            stroke="#e8a838"
-                            strokeWidth="1"
-                            opacity="0.15"
-                        />
+                        <circle cx="14" cy="14" r="10" stroke="#e8a838" strokeWidth="1.5" opacity="0.4" />
+                        <circle cx="14" cy="14" r="13.5" stroke="#e8a838" strokeWidth="1" opacity="0.15" />
                     </svg>
                     <span className="font-display text-2xl font-semibold tracking-tight text-text-primary">
                         Spotlight
@@ -108,19 +105,28 @@ export default function Navbar() {
                             : "max-md:opacity-0 max-md:pointer-events-none max-md:fixed max-md:inset-0 max-md:bg-[rgba(8,8,14,0.97)] max-md:flex-col max-md:justify-center max-md:gap-4"
                     }`}
                 >
-                    {navLinks.map((link) => (
-                        <a
-                            key={link.label}
-                            href={link.href}
-                            className="font-body text-sm max-md:text-lg font-medium tracking-wide uppercase text-text-secondary no-underline px-4 py-2 max-md:py-3 rounded-md hover:text-text-primary hover:bg-white/5 transition-colors duration-200"
-                            onClick={() => setMobileOpen(false)}
-                        >
-                            {link.label}
-                        </a>
-                    ))}
+                    <a
+                        href="#events"
+                        onClick={handleEventsClick}
+                        className={`font-body text-sm max-md:text-lg font-medium tracking-wide uppercase no-underline px-4 py-2 max-md:py-3 rounded-md transition-colors duration-200 ${
+                            currentView === "events"
+                                ? "text-gold bg-white/5 font-semibold"
+                                : "text-text-secondary hover:text-text-primary hover:bg-white/5"
+                        }`}
+                    >
+                        Events
+                    </a>
+
+                    <a
+                        href="#venues"
+                        onClick={handleEventsClick}
+                        className="font-body text-sm max-md:text-lg font-medium tracking-wide uppercase text-text-secondary no-underline px-4 py-2 max-md:py-3 rounded-md hover:text-text-primary hover:bg-white/5 transition-colors duration-200"
+                    >
+                        Venues
+                    </a>
 
                     {user ? (
-                        /* User Pill / Profile Dropdown */
+                        /* User Profile Dropdown */
                         <div className="relative md:ml-4">
                             <button
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -131,20 +137,10 @@ export default function Navbar() {
                                     {getUserInitials()}
                                 </div>
                                 <span className="font-body text-sm font-semibold text-text-primary max-w-[120px] truncate">
-                                    {user.first_name ||
-                                        user.email.split("@")[0]}
+                                    {user.first_name || user.email.split("@")[0]}
                                 </span>
-                                <svg
-                                    className="w-3.5 h-3.5 text-text-muted"
-                                    viewBox="0 0 16 16"
-                                    fill="none"
-                                >
-                                    <path
-                                        d="M4 6l4 4 4-4"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="round"
-                                    />
+                                <svg className="w-3.5 h-3.5 text-text-muted" viewBox="0 0 16 16" fill="none">
+                                    <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                                 </svg>
                             </button>
 
@@ -158,17 +154,6 @@ export default function Navbar() {
                                             {user.email}
                                         </p>
                                     </div>
-
-                                    <a
-                                        href="#tickets"
-                                        className="flex items-center gap-2 px-4 py-2 font-body text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-white/5 no-underline transition-colors"
-                                        onClick={() => {
-                                            setDropdownOpen(false);
-                                            setMobileOpen(false);
-                                        }}
-                                    >
-                                        My Tickets
-                                    </a>
 
                                     <button
                                         onClick={() => {

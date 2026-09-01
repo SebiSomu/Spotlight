@@ -1,4 +1,4 @@
-﻿Rails.application.routes.draw do
+Rails.application.routes.draw do
     get "up" => "rails/health#show", as: :rails_health_check
 
     namespace :api do
@@ -8,6 +8,8 @@
                 post "login", to: "sessions#create"
                 get "me", to: "sessions#me"
             end
+
+            resources :events, only: [:index, :show]
         end
     end
 end
