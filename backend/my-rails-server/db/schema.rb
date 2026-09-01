@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_183000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -44,6 +44,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_183000) do
     t.index ["user_id"], name: "index_holds_on_user_id"
   end
 
+  create_table "orders", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "hold_id"
+    t.string "payment_method", default: "card", null: false
+    t.string "payment_reference", null: false
+    t.string "status", default: "paid", null: false
+    t.integer "total_cents", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["hold_id"], name: "index_orders_on_hold_id"
+    t.index ["user_id", "created_at"], name: "index_orders_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_orders_on_user_id"
+  end
+
   create_table "ticket_types", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "event_id", null: false
@@ -53,6 +67,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_183000) do
     t.integer "quantity_remaining"
     t.datetime "updated_at", null: false
     t.index ["event_id"], name: "index_ticket_types_on_event_id"
+  end
+
+  create_table "tickets", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "order_id", null: false
+    t.string "status", default: "valid", null: false
+    t.string "ticket_code", null: false
+    t.bigint "ticket_type_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_tickets_on_order_id"
+    t.index ["ticket_code"], name: "index_tickets_on_ticket_code", unique: true
+    t.index ["ticket_type_id"], name: "index_tickets_on_ticket_type_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -80,5 +106,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_183000) do
   add_foreign_key "events", "venues"
   add_foreign_key "holds", "ticket_types"
   add_foreign_key "holds", "users"
+  add_foreign_key "orders", "holds"
+  add_foreign_key "orders", "users"
   add_foreign_key "ticket_types", "events"
+  add_foreign_key "tickets", "orders"
+  add_foreign_key "tickets", "ticket_types"
 end

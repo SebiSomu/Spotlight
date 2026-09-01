@@ -1,5 +1,6 @@
-﻿class User < ApplicationRecord
+class User < ApplicationRecord
     has_secure_password
+    has_many :orders, dependent: :destroy
 
     ROLES = %w[customer admin venue_manager].freeze
 

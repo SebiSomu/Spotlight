@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { type EventItem, type TicketType, fetchEventByIdApi } from "../api/events";
 import { type Hold, createHoldApi, releaseHoldApi } from "../api/holds";
+import type { Order } from "../api/orders";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 import StadiumSeatMap from "../components/StadiumSeatMap";
+import CheckoutModal from "../components/CheckoutModal";
+import OrderConfirmationModal from "../components/OrderConfirmationModal";
 
 interface EventDetailPageProps {
     eventId: number;
@@ -29,6 +32,10 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
     const [holdLoading, setHoldLoading] = useState(false);
     const [holdError, setHoldError] = useState<string | null>(null);
     const [secondsRemaining, setSecondsRemaining] = useState(0);
+
+    // Checkout & Order modal state
+    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+    const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
     const { toast } = useToast();
     const { user, openModal } = useAuth();
@@ -64,6 +71,7 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
                     clearInterval(interval);
                     setActiveHold(null);
                     setHoldError(null);
+                    setIsCheckoutOpen(false);
                     toast.error(
                         "Hold Expired",
                         "Your ticket reservation has expired. Please select tickets again."
@@ -117,7 +125,7 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
             setActiveHold(res.hold);
             toast.success(
                 "Tickets Reserved!",
-                `${quantity}x ${selectedTicketType.name} held for 10 minutes.`
+                `${quantity}x ${selectedTicketType.name} held for testing.`
             );
             // Update local quantity_remaining to reflect the hold
             setEvent((prev) => {
@@ -147,6 +155,7 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
             await releaseHoldApi(activeHold.id);
             setActiveHold(null);
             setHoldError(null);
+            setIsCheckoutOpen(false);
             toast.info("Hold Released", "Your reservation has been cancelled and tickets returned.");
             // Re-fetch event to restore quantities
             const res = await fetchEventByIdApi(eventId);
@@ -157,6 +166,18 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
         } finally {
             setHoldLoading(false);
         }
+    };
+
+    const handlePaymentSuccess = (order: Order) => {
+        setActiveHold(null);
+        setIsCheckoutOpen(false);
+        setCompletedOrder(order);
+        toast.success(
+            "Order Confirmed!",
+            `Issued ${order.tickets.length} digital tickets for ${event?.artist}.`
+        );
+        // Re-fetch event to update stock
+        fetchEventByIdApi(eventId).then((res) => setEvent(res.event)).catch(() => {});
     };
 
     if (loading) {
@@ -362,6 +383,7 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
 
                                 {/* Checkout CTA */}
                                 <button
+                                    onClick={() => setIsCheckoutOpen(true)}
                                     className="w-full font-body text-xs font-bold uppercase tracking-wider text-bg-primary bg-gold hover:bg-gold-hover py-4 rounded-xl border-none cursor-pointer transition-all shadow-lg hover:shadow-gold/20 flex items-center justify-center gap-2"
                                     id="proceed-to-checkout-btn"
                                 >
@@ -531,6 +553,28 @@ export default function EventDetailPage({ eventId, onBack }: EventDetailPageProp
                     </div>
                 </div>
             </div>
+
+            {/* CHECKOUT MODAL */}
+            {isCheckoutOpen && activeHold && (
+                <CheckoutModal
+                    hold={activeHold}
+                    event={event}
+                    secondsRemaining={secondsRemaining}
+                    onClose={() => setIsCheckoutOpen(false)}
+                    onSuccess={handlePaymentSuccess}
+                />
+            )}
+
+            {/* ORDER CONFIRMATION MODAL */}
+            {completedOrder && (
+                <OrderConfirmationModal
+                    order={completedOrder}
+                    onClose={() => {
+                        setCompletedOrder(null);
+                        onBack();
+                    }}
+                />
+            )}
         </div>
     );
 }

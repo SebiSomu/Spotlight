@@ -1,6 +1,7 @@
 class Hold < ApplicationRecord
     belongs_to :user, optional: true
     belongs_to :ticket_type
+    has_one :order, dependent: :nullify
 
     STATUSES = %w[active expired converted].freeze
 

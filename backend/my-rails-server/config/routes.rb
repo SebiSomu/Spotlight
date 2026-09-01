@@ -11,6 +11,7 @@ Rails.application.routes.draw do
 
             resources :events, only: [:index, :show]
             resources :holds, only: [:create, :show, :destroy]
+            resources :orders, only: [:index, :show, :create]
         end
     end
 end
