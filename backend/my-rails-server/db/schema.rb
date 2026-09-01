@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_172010) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_172546) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_172010) do
     t.string "artist", null: false
     t.datetime "created_at", null: false
     t.text "description"
+    t.string "genre"
     t.string "image_url"
     t.integer "min_price_cents", default: 0, null: false
     t.datetime "starts_at", null: false

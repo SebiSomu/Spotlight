@@ -19,6 +19,7 @@ export interface EventItem {
     starts_at: string;
     formatted_date: string;
     formatted_time: string;
+    genre: string;
     status: string;
     min_price: number;
     min_price_cents: number;
@@ -34,14 +35,14 @@ export interface EventsResponse {
 export interface FetchEventsParams {
     search?: string;
     date?: string;
+    genre?: string;
 }
 
-export async function fetchEventsApi(
-    params: FetchEventsParams = {},
-): Promise<EventsResponse> {
+export async function fetchEventsApi(params: FetchEventsParams = {}): Promise<EventsResponse> {
     const query = new URLSearchParams();
     if (params.search) query.set("search", params.search);
     if (params.date) query.set("date", params.date);
+    if (params.genre) query.set("genre", params.genre);
 
     const queryString = query.toString() ? `?${query.toString()}` : "";
     return apiFetch<EventsResponse>(`/events${queryString}`, {
@@ -49,9 +50,7 @@ export async function fetchEventsApi(
     });
 }
 
-export async function fetchEventByIdApi(
-    id: number,
-): Promise<{ event: EventItem }> {
+export async function fetchEventByIdApi(id: number): Promise<{ event: EventItem }> {
     return apiFetch<{ event: EventItem }>(`/events/${id}`, {
         method: "GET",
     });

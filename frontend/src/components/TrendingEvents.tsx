@@ -45,9 +45,14 @@ function EventCard({ event, index }: { event: EventItem; index: number }) {
 
             {/* Body */}
             <div className="p-5">
-                <h3 className="font-display text-lg font-bold tracking-tight text-text-primary mb-1 group-hover:text-gold transition-colors duration-200">
-                    {event.artist}
-                </h3>
+                <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-display text-lg font-bold tracking-tight text-text-primary group-hover:text-gold transition-colors duration-200 truncate">
+                        {event.artist}
+                    </h3>
+                </div>
+                <span className="inline-block font-body text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 border border-gold/20 px-2 py-0.5 rounded-full mb-2">
+                    {event.genre}
+                </span>
                 <p className="font-body text-xs sm:text-sm text-text-muted mb-1 truncate">
                     {event.title}
                 </p>

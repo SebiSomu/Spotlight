@@ -2,9 +2,11 @@ class Event < ApplicationRecord
     belongs_to :venue
 
     STATUSES = %w[draft published cancelled sold_out].freeze
+    GENRES = ["Reggaeton & Latin", "Hip-Hop & Rap", "Pop", "R&B", "Alternative & Rock", "Electronic"].freeze
 
     validates :title, presence: true
     validates :artist, presence: true
+    validates :genre, presence: true
     validates :starts_at, presence: true
     validates :status, presence: true, inclusion: { in: STATUSES }
     validates :min_price_cents, numericality: { greater_than_or_equal_to: 0 }
@@ -12,12 +14,18 @@ class Event < ApplicationRecord
     scope :published, -> { where(status: "published") }
     scope :upcoming, -> { where("starts_at >= ?", Time.current).order(starts_at: :asc) }
 
+    scope :by_genre, ->(genre_name) {
+        return all if genre_name.blank? || genre_name == "All"
+
+        where("LOWER(genre) = ?", genre_name.to_s.downcase.strip)
+    }
+
     scope :search, ->(query) {
         return all if query.blank?
 
         term = "%#{query.to_s.downcase.strip}%"
         joins(:venue).where(
-            "LOWER(events.title) LIKE :term OR LOWER(events.artist) LIKE :term OR LOWER(venues.name) LIKE :term OR LOWER(venues.city) LIKE :term",
+            "LOWER(events.title) LIKE :term OR LOWER(events.artist) LIKE :term OR LOWER(events.genre) LIKE :term OR LOWER(venues.name) LIKE :term OR LOWER(venues.city) LIKE :term",
             term: term
         )
     }
@@ -50,6 +58,7 @@ class Event < ApplicationRecord
             id: id,
             title: title,
             artist: artist,
+            genre: genre,
             description: description,
             starts_at: starts_at,
             formatted_date: formatted_date,
