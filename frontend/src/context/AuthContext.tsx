@@ -14,6 +14,8 @@ import {
     fetchMeApi,
 } from "../api/auth";
 
+import { useToast } from "./ToastContext";
+
 export type AuthModalMode = "login" | "signup";
 
 interface AuthContextType {
@@ -39,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [modalMode, setModalMode] = useState<AuthModalMode>("login");
+
+    const { toast } = useToast();
 
     useEffect(() => {
         async function restoreSession() {
@@ -69,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(res.token);
         setUser(res.user);
         closeModal();
+        toast.success("Welcome Back!", `Signed in as ${res.user.email}`);
     };
 
     const signup = async (params: SignupParams) => {
@@ -77,12 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(res.token);
         setUser(res.user);
         closeModal();
+        toast.success("Account Created!", "Welcome to Spotlight.");
     };
 
     const logout = () => {
         localStorage.removeItem("spotlight_token");
         setToken(null);
         setUser(null);
+        toast.info("Signed Out", "You have been logged out successfully.");
     };
 
     const openModal = (mode: AuthModalMode = "login") => {

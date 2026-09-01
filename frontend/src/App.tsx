@@ -1,3 +1,4 @@
+import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
@@ -7,15 +8,17 @@ import AuthModal from "./components/AuthModal";
 
 function App() {
     return (
-        <AuthProvider>
-            <Navbar />
-            <main>
-                <Hero />
-                <TrendingEvents />
-            </main>
-            <Footer />
-            <AuthModal />
-        </AuthProvider>
+        <ToastProvider>
+            <AuthProvider>
+                <Navbar />
+                <main>
+                    <Hero />
+                    <TrendingEvents />
+                </main>
+                <Footer />
+                <AuthModal />
+            </AuthProvider>
+        </ToastProvider>
     );
 }
 

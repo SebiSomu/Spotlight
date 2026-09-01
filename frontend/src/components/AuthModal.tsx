@@ -1,9 +1,13 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AuthModal() {
     const { isModalOpen, modalMode, closeModal, login, signup, openModal } =
         useAuth();
+    const { toast } = useToast();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -39,35 +43,89 @@ export default function AuthModal() {
 
     const isLogin = modalMode === "login";
 
+    const validateForm = (): boolean => {
+        const trimmedEmail = email.trim();
+
+        if (!trimmedEmail) {
+            toast.error("Missing Field", "Please enter your email address.");
+            setError("Email address is required.");
+            return false;
+        }
+
+        if (!EMAIL_REGEX.test(trimmedEmail)) {
+            toast.error(
+                "Invalid Email Format",
+                "Please enter a valid email address (e.g. name@example.com).",
+            );
+            setError("Please enter a valid email format.");
+            return false;
+        }
+
+        if (!password) {
+            toast.error("Missing Field", "Please enter your password.");
+            setError("Password is required.");
+            return false;
+        }
+
+        if (password.length < 6) {
+            toast.error(
+                "Password Too Short",
+                "Password must be at least 6 characters long.",
+            );
+            setError("Password must be at least 6 characters.");
+            return false;
+        }
+
+        if (!isLogin) {
+            if (!firstName.trim() || !lastName.trim()) {
+                toast.error(
+                    "Missing Name",
+                    "Please enter both your first and last name.",
+                );
+                setError("First and last name are required.");
+                return false;
+            }
+
+            if (password !== passwordConfirmation) {
+                toast.error(
+                    "Password Mismatch",
+                    "Password and confirmation do not match.",
+                );
+                setError("Passwords do not match.");
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError(null);
 
-        if (!isLogin && password !== passwordConfirmation) {
-            setError("Passwords do not match");
-            return;
-        }
+        if (!validateForm()) return;
 
         setIsSubmitting(true);
 
         try {
             if (isLogin) {
-                await login({ email, password });
+                await login({ email: email.trim(), password });
             } else {
                 await signup({
-                    email,
+                    email: email.trim(),
                     password,
                     password_confirmation: passwordConfirmation,
-                    first_name: firstName,
-                    last_name: lastName,
+                    first_name: firstName.trim(),
+                    last_name: lastName.trim(),
                 });
             }
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError("An unexpected error occurred");
-            }
+            const errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : "An unexpected error occurred.";
+            setError(errorMessage);
+            toast.error("Authentication Failed", errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -200,7 +258,7 @@ export default function AuthModal() {
                 )}
 
                 {/* Auth Form */}
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
                     {!isLogin && (
                         <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -209,7 +267,6 @@ export default function AuthModal() {
                                 </label>
                                 <input
                                     type="text"
-                                    required
                                     value={firstName}
                                     onChange={(e) =>
                                         setFirstName(e.target.value)
@@ -224,7 +281,6 @@ export default function AuthModal() {
                                 </label>
                                 <input
                                     type="text"
-                                    required
                                     value={lastName}
                                     onChange={(e) =>
                                         setLastName(e.target.value)
@@ -242,7 +298,6 @@ export default function AuthModal() {
                         </label>
                         <input
                             type="email"
-                            required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="you@example.com"
@@ -257,8 +312,6 @@ export default function AuthModal() {
                         </label>
                         <input
                             type="password"
-                            required
-                            minLength={6}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
@@ -274,8 +327,6 @@ export default function AuthModal() {
                             </label>
                             <input
                                 type="password"
-                                required
-                                minLength={6}
                                 value={passwordConfirmation}
                                 onChange={(e) =>
                                     setPasswordConfirmation(e.target.value)
