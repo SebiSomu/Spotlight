@@ -62,7 +62,8 @@ Concert ticketing has a few recurring hard parts. Model them explicitly rather t
 - Use `TicketType.lock` (`SELECT ... FOR UPDATE`) inside a transaction in `Holds::CreateHold` service before decrementing `quantity_remaining`.
 - `Holds::CreateHold` service at `app/services/holds/create_hold.rb`: wraps hold creation + inventory decrement in a single transaction with row lock.
 - `ExpireHoldsJob` at `app/jobs/expire_holds_job.rb`: triggered per-hold by Solid Queue at `expires_at`; re-locks ticket_type and restores `quantity_remaining`.
-- `HoldsController` at `app/controllers/api/v1/holds_controller.rb`: `POST /api/v1/holds` (create), `GET /api/v1/holds/:id` (status), `DELETE /api/v1/holds/:id` (early release). All require auth.
+- `HoldsController` at `app/controllers/api/v1/holds_controller.rb`: `POST /api/v1/holds` (create), `GET /api/v1/holds/:id` (status), `DELETE /api/v1/holds/:id` (early release). All endpoints strictly require authentication (`before_action :authenticate_user!`).
+- **Authentication Guard**: Signed-out users cannot initiate ticket holds or purchases. Clicking "Reserve" while signed out prompts the Login/Signup Auth Modal at the frontend level, while `CreateHold` service and `HoldsController` return 401/403 at the API level.
 - Frontend hold countdown in `EventDetailPage.tsx` uses a `setInterval` driven by `seconds_remaining` from the server response — not a client-only timer.
 - `StadiumSeatMap.tsx` component: interactive SVG graphic showing venue sections (VIP Pit, Floor GA, Lower Bowl, Upper Level); clicking a section selects the matching `TicketType` by name keyword matching.
 

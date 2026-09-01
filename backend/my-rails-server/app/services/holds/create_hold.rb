@@ -9,6 +9,7 @@ module Holds
         end
 
         def call
+            return error("You must be signed in to reserve tickets.") unless @user
             return error("Quantity must be at least 1") if @quantity < 1
             return error("Maximum 8 tickets per hold") if @quantity > 8
 

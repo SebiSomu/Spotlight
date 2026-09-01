@@ -52,6 +52,7 @@ module Api
 
                 unless @hold.user_id == current_user.id
                     render json: { error: "Forbidden" }, status: :forbidden
+                    return
                 end
             end
         end
