@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_175249) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_175249) do
     t.index ["starts_at"], name: "index_events_on_starts_at"
     t.index ["status"], name: "index_events_on_status"
     t.index ["venue_id"], name: "index_events_on_venue_id"
+  end
+
+  create_table "holds", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.integer "quantity", default: 1, null: false
+    t.string "status", default: "active", null: false
+    t.bigint "ticket_type_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["ticket_type_id", "status"], name: "index_holds_on_ticket_type_id_and_status"
+    t.index ["ticket_type_id"], name: "index_holds_on_ticket_type_id"
+    t.index ["user_id"], name: "index_holds_on_user_id"
   end
 
   create_table "ticket_types", force: :cascade do |t|
@@ -65,5 +78,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_175249) do
   end
 
   add_foreign_key "events", "venues"
+  add_foreign_key "holds", "ticket_types"
+  add_foreign_key "holds", "users"
   add_foreign_key "ticket_types", "events"
 end

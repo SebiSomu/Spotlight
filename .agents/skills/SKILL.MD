@@ -55,13 +55,16 @@ Concert ticketing has a few recurring hard parts. Model them explicitly rather t
 - **Seat** (if reserved seating) — belongs to a Venue's seat map, has a status (available/held/sold)
 - **Order** — belongs to a User, has line items (tickets), a status (pending/paid/failed/refunded), and a total
 - **Ticket** — the actual issued ticket after payment succeeds; has a unique code/QR for entry, belongs to an Order and a TicketType (and Seat, if applicable)
-- **Hold** — a short-lived reservation (e.g. 10–15 min) on a Seat or TicketType quantity while a user is checking out; must expire automatically (background job) and release inventory back
+- **Hold** — a short-lived reservation (10 min) on a TicketType quantity while a user checks out; expires automatically via `ExpireHoldsJob` (Solid Queue) and releases inventory back
 
 **Inventory correctness is the top priority.** Never let two orders sell the same seat or oversell a TicketType's quantity:
 
-- Use DB-level constraints (unique index on `seat_id` for non-cancelled tickets) or row locking (`SELECT ... FOR UPDATE`) around the hold → purchase transition, not just app-level checks.
-- Wrap hold creation, payment confirmation, and ticket issuance in a single DB transaction per order.
-- Expire holds via a scheduled job, not just client-side timers.
+- Use `TicketType.lock` (`SELECT ... FOR UPDATE`) inside a transaction in `Holds::CreateHold` service before decrementing `quantity_remaining`.
+- `Holds::CreateHold` service at `app/services/holds/create_hold.rb`: wraps hold creation + inventory decrement in a single transaction with row lock.
+- `ExpireHoldsJob` at `app/jobs/expire_holds_job.rb`: triggered per-hold by Solid Queue at `expires_at`; re-locks ticket_type and restores `quantity_remaining`.
+- `HoldsController` at `app/controllers/api/v1/holds_controller.rb`: `POST /api/v1/holds` (create), `GET /api/v1/holds/:id` (status), `DELETE /api/v1/holds/:id` (early release). All require auth.
+- Frontend hold countdown in `EventDetailPage.tsx` uses a `setInterval` driven by `seconds_remaining` from the server response — not a client-only timer.
+- `StadiumSeatMap.tsx` component: interactive SVG graphic showing venue sections (VIP Pit, Floor GA, Lower Bowl, Upper Level); clicking a section selects the matching `TicketType` by name keyword matching.
 
 ## Seeding artists & venues with real data
 

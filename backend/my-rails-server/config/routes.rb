@@ -10,6 +10,7 @@ Rails.application.routes.draw do
             end
 
             resources :events, only: [:index, :show]
+            resources :holds, only: [:create, :show, :destroy]
         end
     end
 end
