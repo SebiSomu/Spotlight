@@ -119,31 +119,43 @@ class LLMService:
             or ("No direct database records" in context_text)
             or ("No matching records" in context_text)
         )
-        header = "[Offline Mode] Spotlight AI — LLM API unavailable.\n\n"
 
         if not no_records:
             tail = (
-                "\n\n(Your LLM API is currently not reachable so I'm showing raw DB results above. "
-                "Set a valid GROQ_API_KEY (and working model) or ANTHROPIC_API_KEY for natural-language answers. "
-                "Models auto-tested at startup. Tip: run `python ingest.py` for semantic search.)"
+                "\n\n- "
+                "I couldn't reach my natural-language brain right now, so I'm showing you the raw Spotlight matches above. "
+                "Once the Groq API connection is healthy again, I'll rephrase these in plain English. "
+                "Tip: run python ingest.py to enable semantic search as well."
             )
-            return header + context_text + tail
+            return self._strip_markdown(context_text + tail)
 
-        intro = (
-            "I'm Spotlight AI, your concert and live event assistant. I can help with:\n\n"
-            "  • Finding upcoming concerts by artist, venue, city, or genre\n"
-            "  • Ticket pricing and availability details\n"
-            "  • Venue information and location\n"
-            "  • Artist lineups and upcoming shows\n\n"
-            "Example questions:\n"
-            "  - What Bad Bunny concerts are coming up?\n"
-            "  - Tell me about Taylor Swift at SoFi Stadium\n"
-            "  - What's the cheapest ticket for Drake in Brooklyn?\n"
-            "  - Show me venues in California\n\n"
-            "Note: Run `python ingest.py` (or POST /api/v1/chat/ingest) to index the database, "
-            "then add a valid GROQ_API_KEY with an available model for natural-language answers."
+        return self._strip_markdown(
+            "Hi! I'm Spotlight, your event concierge. "
+            "Right now my AI brain is booting or temporarily offline, but I can help you find: upcoming shows by artist, "
+            "concerts in a specific city, venue info, and the cheapest ticket prices. "
+            "Try things like:\n"
+            "  1. Bad Bunny shows coming up\n"
+            "  2. Venues in California\n"
+            "  3. Cheapest ticket for Drake in Brooklyn\n\n"
+            f'Your question was: "{user_message}"\n\n'
+            "Note: If you have a Groq API key, put GROQ_API_KEY=... in a .env file next to main.py and restart the server."
         )
-        return header + intro
+
+    @staticmethod
+    def _strip_markdown(text: str) -> str:
+        if not text:
+            return text
+        import re
+        t = text
+        t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
+        t = re.sub(r"\*(.+?)\*", r"\1", t)
+        t = re.sub(r"__(.+?)__", r"\1", t)
+        t = re.sub(r"_(.+?)_", r"\1", t)
+        t = re.sub(r"`([^`]+)`", r"\1", t)
+        t = re.sub(r"^\s{0,4}[-*+]\s+", "  - ", t, flags=re.MULTILINE)
+        t = t.replace("|", "/")
+        t = re.sub(r"^#{1,6}\s*", "", t, flags=re.MULTILINE)
+        return t
 
     def generate_completion(
         self,
