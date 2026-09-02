@@ -29,10 +29,18 @@ spotlight/
 │   │   ├── services/        # booking, payment, seat-hold logic lives here, not in controllers
 │   │   └── jobs/
 │   ├── db/migrate/
-│   ├── db/data/seeds_data.json # external JSON seed dataset for venues, events, and ticket types
-│   ├── db/seeds.rb          # parses db/data/seeds_data.json idempotently
-│   ├── lib/tasks/           # custom rake tasks (e.g. fetch_artist_images.rake)
+│   ├── db/seeds.rb          # real artist/venue seed data — see "Seeding artists & venues" below
 │   └── spec/                # RSpec
+├── ai-chatbot/            # Python 3.11+, FastAPI chatbot service
+│   ├── app/
+│   │   ├── routers/        # API endpoints (chat proxy to LLM)
+│   │   ├── services/       # embedding, vector search, chat logic
+│   │   ├── models/         # Pydantic schemas for requests/responses
+│   │   └── ingestion/      # scheduled ingestion from Rails data
+│   ├── ingestion/
+│   │   └── tasks.py        # rake-like tasks to embed Artists/Events/Venues into pgvector
+│   ├── pyproject.toml        # Python dependencies (FastAPI, pgvector client, embeddings lib, Groq SDK)
+│   └── .env                # environment-only (API keys, etc) — NEVER commit
 └── frontend/                 # React app
     ├── src/
     │   ├── components/
@@ -55,20 +63,13 @@ Concert ticketing has a few recurring hard parts. Model them explicitly rather t
 - **Seat** (if reserved seating) — belongs to a Venue's seat map, has a status (available/held/sold)
 - **Order** — belongs to a User, has line items (tickets), a status (pending/paid/failed/refunded), and a total
 - **Ticket** — the actual issued ticket after payment succeeds; has a unique code/QR for entry, belongs to an Order and a TicketType (and Seat, if applicable)
-- **Hold** — a short-lived reservation (10 min) on a TicketType quantity while a user checks out; expires automatically via `ExpireHoldsJob` (Solid Queue) and releases inventory back
+- **Hold** — a short-lived reservation (e.g. 10–15 min) on a Seat or TicketType quantity while a user is checking out; must expire automatically (background job) and release inventory back
 
 **Inventory correctness is the top priority.** Never let two orders sell the same seat or oversell a TicketType's quantity:
 
-- Use `TicketType.lock` (`SELECT ... FOR UPDATE`) inside a transaction in `Holds::CreateHold` service before decrementing `quantity_remaining`.
-- `Holds::CreateHold` service at `app/services/holds/create_hold.rb`: wraps hold creation + inventory decrement in a single transaction with row lock.
-- `ExpireHoldsJob` at `app/jobs/expire_holds_job.rb`: triggered per-hold by Solid Queue at `expires_at`; re-locks ticket_type and restores `quantity_remaining`.
-- `HoldsController` at `app/controllers/api/v1/holds_controller.rb`: `POST /api/v1/holds` (create), `GET /api/v1/holds/:id` (status), `DELETE /api/v1/holds/:id` (early release). All endpoints strictly require authentication (`before_action :authenticate_user!`).
-- **Orders & Payment Confirmation**: `Orders::CreateFromHold` service at `app/services/orders/create_from_hold.rb` wraps hold-consumption, payment gateway simulation, order record creation, and ticket generation (with unique `SPL-XXXXXXXX` QR codes) inside a single database transaction. If payment fails, the transaction rolls back so the active hold and inventory are never stuck or lost.
-- `OrdersController` at `app/controllers/api/v1/orders_controller.rb`: `POST /api/v1/orders` (checkout hold), `GET /api/v1/orders` (user purchase history), `GET /api/v1/orders/:id` (digital tickets).
-- **User Dashboard & Order History**: `UserDashboardPage.tsx` at `src/pages/UserDashboardPage.tsx` provides an all-in-one member portal displaying account details, quick stats (total orders, passes, total spent), itemized order receipts, and digital passes with vector QR code stubs and print capabilities.
-- **Authentication Guard**: Signed-out users cannot initiate ticket holds or purchases. Clicking "Reserve" while signed out prompts the Login/Signup Auth Modal at the frontend level, while `CreateHold` service and `HoldsController` return 401/403 at the API level.
-- Frontend hold countdown in `EventDetailPage.tsx` uses a `setInterval` driven by `seconds_remaining` from the server response — not a client-only timer.
-- `StadiumSeatMap.tsx` component: interactive SVG graphic showing venue sections (VIP Pit, Floor GA, Lower Bowl, Upper Level); clicking a section selects the matching `TicketType` by name keyword matching.
+- Use DB-level constraints (unique index on `seat_id` for non-cancelled tickets) or row locking (`SELECT ... FOR UPDATE`) around the hold → purchase transition, not just app-level checks.
+- Wrap hold creation, payment confirmation, and ticket issuance in a single DB transaction per order.
+- Expire holds via a scheduled job, not just client-side timers.
 
 ## Seeding artists & venues with real data
 
@@ -77,11 +78,9 @@ When populating Artist and Venue records (seeds, fixtures, or ad-hoc data entry 
 - **Artists**: real name, genre(s), and a short real bio. Don't invent fictional bands unless the task explicitly asks for test/dummy data.
 - **Venues**: real venue name, real address/city, and a real (or realistic, sourced) capacity — don't fabricate an address.
 - **Photos**: source artist images from an official/authorized source — the Spotify Web API's artist images endpoint is the preferred source (it's built for this and returns properly licensed CDN URLs), or another official profile (the artist's/venue's own verified page) if Spotify doesn't have the act. Store the image **URL**, not a downloaded/embedded copy of the file, so the app is always pointing at the source's own hosting rather than a redistributed copy.
-- **Image Extraction Task**: Use `lib/tasks/fetch_artist_images.rake` (`bundle exec rails events:fetch_artist_images`) to automatically extract, fetch, and update official artist profile photos for event records across the codebase.
 - Never scrape or hotlink images from unofficial fan sites, social media reposts, or search-engine image results — stick to the artist/venue's own official source.
 - If a real photo genuinely can't be sourced for a given artist/venue, leave the image field blank / use a neutral placeholder rather than substituting an unrelated or unverified image.
-- **External JSON Seed Dataset**: Store seed records in `db/data/seeds_data.json` rather than hardcoding arrays directly inside `db/seeds.rb`. Always validate and verify ticket prices, tier names, capacities, and venue addresses against real sources (Ticketmaster, official venue sites, Spotify API) before writing into `db/data/seeds_data.json`.
-- **Idempotent Seeds**: `db/seeds.rb` should parse `db/data/seeds_data.json` and use `find_or_initialize_by` on unique attributes (`name` for venues, `title` + `artist` for events, `name` for ticket types) so re-running seeds is safe and non-duplicating.
+- Seed scripts (`db/seeds.rb` or dedicated rake tasks) should be idempotent — safe to re-run without duplicating artists/venues (`find_or_create_by` on a unique attribute like name+city, or an external ID from the source API).
 
 ## Conventions
 
@@ -108,3 +107,31 @@ When populating Artist and Venue records (seeds, fixtures, or ad-hoc data entry 
 - Never insert emojis in code, comments, or commit messages; remove any that show up.
 - Never log raw payment details (card numbers, CVV) anywhere, including error logs/Sentry breadcrumbs.
 - Any change touching Order/Ticket/Seat/Hold logic should call out how it affects concurrent-purchase safety in the PR description or commit message.
+- Always use uv when working with python, not pip
+
+## AI concert assistant (RAG chatbot)
+
+A Python service that answers user questions about concerts/artists/venues and suggests events, using retrieval-augmented generation.
+
+**Stack**
+
+- Python 3.11+, FastAPI, in its own top-level directory: `ai-service/`
+- Vector store: pgvector extension on the same Postgres instance used by Rails (no new database infra)
+- Embeddings: Voyage AI or OpenAI `text-embedding-3-small`, kept behind a thin provider interface
+- Generation: Groq API, called with retrieved context injected into the prompt
+- The browser never talks to `ai-service` directly — React calls a Rails endpoint (e.g. `/api/v1/chat`), Rails forwards to `ai-service` with an internal service token. This keeps auth centralized in Rails and keeps LLM/embedding API keys server-side only.
+
+**Two workflows**
+
+1. **Ingestion (keeps the vector store fresh)**: whenever an Event/Artist/Venue is created or updated in Rails, its text data gets embedded and upserted into the pgvector table — either via a Rails-side webhook/job calling `ai-service`, or a periodic resync job inside `ai-service`. Must be idempotent (upsert on a stable external key, not insert-only).
+2. **Request path**: Chat widget (React) → Rails API (auth + proxy) → `ai-service` (FastAPI) → embed the user's query → similarity search against pgvector (optionally filtered by date/location) → build a prompt from the retrieved context + query → call the Claude API → return the answer back up the chain.
+
+**`ai-service/` conventions**
+
+- Structure mirrors the Rails services pattern: `routers/`, `services/`, `models/` (Pydantic schemas), `ingestion/`
+- Type hints everywhere; Pydantic models for every request/response
+- 4-space indentation (project standard, applies here too)
+- Never log full prompts/responses that contain user PII — redact before logging
+- Keep the embedding/LLM provider behind a small interface so swapping providers doesn't ripple through the codebase
+- Tests mock the LLM and vector-store calls; keep any tests that hit real APIs behind a flag (cost + flakiness)
+- API keys (Anthropic, embedding provider) load from environment only — never committed, never sent to the frontend

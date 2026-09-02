@@ -1,0 +1,42 @@
+class EnablePgvectorAndCreateEmbeddings < ActiveRecord::Migration[8.1]
+  def up
+    execute "CREATE EXTENSION IF NOT EXISTS vector;"
+
+    execute <<~SQL
+      CREATE TABLE IF NOT EXISTS embeddings (
+        id BIGSERIAL PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id BIGINT NOT NULL,
+        chunk_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        embedding vector(384),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    SQL
+
+    execute <<~SQL
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_entity_unique
+        ON embeddings (entity_type, entity_id, chunk_id);
+    SQL
+
+    execute <<~SQL
+      CREATE INDEX IF NOT EXISTS idx_embeddings_entity
+        ON embeddings (entity_type, entity_id);
+    SQL
+
+    execute <<~SQL
+      CREATE INDEX IF NOT EXISTS idx_embeddings_embedding_hnsw
+        ON embeddings USING hnsw (embedding vector_cosine_ops);
+    SQL
+  end
+
+  def down
+    execute "DROP INDEX IF EXISTS idx_embeddings_embedding_hnsw;"
+    execute "DROP INDEX IF EXISTS idx_embeddings_entity;"
+    execute "DROP INDEX IF EXISTS idx_embeddings_entity_unique;"
+    execute "DROP TABLE IF EXISTS embeddings;"
+    execute "DROP EXTENSION IF EXISTS vector;"
+  end
+end

@@ -20,14 +20,27 @@ export async function apiFetch<T>(
         headers,
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get("content-type");
+    let data: any = null;
+
+    if (contentType && contentType.includes("application/json")) {
+        try {
+            data = await response.json();
+        } catch {
+            data = null;
+        }
+    }
 
     if (!response.ok) {
         const errorMessage =
-            data.errors?.join(", ") ||
-            data.error ||
-            "Something went wrong. Please try again.";
+            data?.errors?.join(", ") ||
+            data?.error ||
+            `Server returned HTTP ${response.status} ${response.statusText}`;
         throw new Error(errorMessage);
+    }
+
+    if (data === null) {
+        throw new Error("Server returned an invalid non-JSON response.");
     }
 
     return data as T;

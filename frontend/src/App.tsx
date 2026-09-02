@@ -10,6 +10,7 @@ import EventDetailPage from "./pages/EventDetailPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
+import ChatWidget from "./components/ChatWidget";
 
 function AppContent() {
     const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail" | "dashboard">("home");
@@ -57,6 +58,7 @@ function AppContent() {
             </main>
             <Footer />
             <AuthModal />
+            <ChatWidget />
         </>
     );
 }
