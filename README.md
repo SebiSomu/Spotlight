@@ -1,5 +1,7 @@
 # Spotlight
 
+> **Disclaimer:** This is an unofficial portfolio project built strictly for demonstration purposes. It is not affiliated with, endorsed by, or connected to any commercial ticketing vendor or live event platform.
+
 Spotlight is a concert discovery and ticketing app built with a Ruby on Rails backend, a React frontend, and a Python assistant service. It includes an embedded AI chatbot that helps users find concerts by location, artist, or specific date ranges.
 
 ---
@@ -24,8 +26,19 @@ _View seating maps, ticket options, and availability._
 
 ### AI Assistant Chatbot
 
-![AI Chatbot Assistant](./screenshots/ss3.png)
-![AI Chatbot Assistant](./screenshots/ss4.png)
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="./screenshots/ss3.png" alt="AI Chatbot Assistant View 1" width="400"/><br/>
+      <sub><i>Chatbot location search response</i></sub>
+    </td>
+    <td align="center">
+      <img src="./screenshots/ss4.png" alt="AI Chatbot Assistant View 2" width="400"/><br/>
+      <sub><i>Chatbot artist query response</i></sub>
+    </td>
+  </tr>
+</table>
+
 _Ask questions like "What is the closest concert to California?" or "Any shows next month?"._
 
 </div>
