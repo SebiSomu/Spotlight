@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from app.config import settings
 from app.db import ensure_embeddings_table, get_cursor
@@ -79,13 +80,18 @@ class EventRetriever:
             logger.warning("Vector search permanently disabled: %s", e)
             self._ready = False
 
-    def retrieve_relevant_context(self, query: str, top_k: int = None) -> List[Dict[str, Any]]:
+    def retrieve_relevant_context(
+        self,
+        query: str,
+        top_k: int = None,
+        date_range: Optional[Tuple[datetime, datetime]] = None,
+    ) -> List[Dict[str, Any]]:
         top_k = top_k or settings.VECTOR_TOP_K
         self._ensure_ready()
 
         if not self._ready:
             logger.warning("Vector DB not ready; falling back to keyword-only search.")
-            return self._keyword_fallback(query, top_k)
+            return self._keyword_fallback(query, top_k, date_range=date_range)
 
         try:
             qvec = embedder.embed_one(query)
@@ -126,10 +132,10 @@ class EventRetriever:
                 })
             if results:
                 return results
-            return self._keyword_fallback(query, top_k)
+            return self._keyword_fallback(query, top_k, date_range=date_range)
         except Exception as e:
             logger.error("Vector search failed: %s", e, exc_info=True)
-            return self._keyword_fallback(query, top_k)
+            return self._keyword_fallback(query, top_k, date_range=date_range)
 
     def _build_content_block(
         self,
@@ -167,24 +173,36 @@ class EventRetriever:
 
         return "\n".join(lines)
 
-    def _keyword_fallback(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+    def _keyword_fallback(
+        self,
+        query: str,
+        top_k: int,
+        date_range: Optional[Tuple[datetime, datetime]] = None,
+    ) -> List[Dict[str, Any]]:
         try:
             terms = _extract_search_terms(query)
             logger.info("Keyword fallback: %d search term(s): %r", len(terms), terms)
 
+            date_where = ""
+            date_params: List[Any] = []
+            if date_range and date_range[0] and date_range[1]:
+                date_where = "AND e.starts_at >= %s AND e.starts_at < %s"
+                date_params = [date_range[0], date_range[1]]
+
             if not terms:
                 with get_cursor() as cur:
                     cur.execute(
-                        """
+                        f"""
                         SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
                                e.status, e.min_price_cents,
                                v.name AS venue_name, v.city AS venue_city
                         FROM events e
                         INNER JOIN venues v ON v.id = e.venue_id
+                        WHERE 1=1 {date_where}
                         ORDER BY e.starts_at ASC
                         LIMIT %s;
                         """,
-                        (top_k,),
+                        (*date_params, top_k),
                     )
                     rows = cur.fetchall()
                 results = []
@@ -230,6 +248,7 @@ class EventRetriever:
 
             score_expr = "(" + " + ".join(score_expr_parts) + ")"
 
+            keyword_where = " OR ".join(where_clauses)
             sql = f"""
                 SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
                        e.status, e.min_price_cents,
@@ -237,10 +256,11 @@ class EventRetriever:
                        {score_expr} AS match_score
                 FROM events e
                 INNER JOIN venues v ON v.id = e.venue_id
-                WHERE {" OR ".join(where_clauses)}
+                WHERE ({keyword_where}) {date_where}
                 ORDER BY match_score DESC, e.starts_at ASC
                 LIMIT %s;
             """
+            params.extend(date_params)
             params.append(top_k)
 
             with get_cursor() as cur:
@@ -270,20 +290,28 @@ class EventRetriever:
         user_lat: float,
         user_lng: float,
         top_k: Optional[int] = None,
+        date_range: Optional[Tuple[datetime, datetime]] = None,
     ) -> List[Dict[str, Any]]:
         """Return events sorted by haversine distance from (user_lat, user_lng).
 
         Uses the venues.latitude / venues.longitude columns. Computes distance
         directly in SQL and includes it on each returned doc so the LLM can
-        cite exact km/miles to the user.
+        cite exact km/miles to the user. Optional date_range=(start, end) filters
+        by e.starts_at.
         """
         top_k = top_k or settings.VECTOR_TOP_K
         self._ensure_ready()
 
         try:
+            date_where = ""
+            date_params: List[Any] = []
+            if date_range and date_range[0] and date_range[1]:
+                date_where = "AND e.starts_at >= %s AND e.starts_at < %s"
+                date_params = [date_range[0], date_range[1]]
+
             with get_cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
                            e.status, e.min_price_cents,
                            v.name AS venue_name, v.city AS venue_city,
@@ -303,10 +331,11 @@ class EventRetriever:
                     INNER JOIN venues v ON v.id = e.venue_id
                     WHERE v.latitude IS NOT NULL AND v.longitude IS NOT NULL
                       AND e.status = 'published'
+                      {date_where}
                     ORDER BY distance_km ASC, e.starts_at ASC
                     LIMIT %s;
                     """,
-                    (float(user_lat), float(user_lng), float(user_lat), top_k),
+                    (float(user_lat), float(user_lng), float(user_lat), *date_params, top_k),
                 )
                 rows = cur.fetchall()
 
@@ -339,6 +368,53 @@ class EventRetriever:
             return results
         except Exception as e:
             logger.error("find_nearest_events failed: %s", e, exc_info=True)
+            return []
+
+    def find_events_in_range(
+        self,
+        date_start: datetime,
+        date_end: datetime,
+        top_k: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return all published events whose starts_at falls within [date_start, date_end)."""
+        top_k = top_k or settings.VECTOR_TOP_K
+        self._ensure_ready()
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
+                           e.status, e.min_price_cents,
+                           v.name AS venue_name, v.city AS venue_city
+                    FROM events e
+                    INNER JOIN venues v ON v.id = e.venue_id
+                    WHERE e.status = 'published'
+                      AND e.starts_at >= %s
+                      AND e.starts_at < %s
+                    ORDER BY e.starts_at ASC
+                    LIMIT %s;
+                    """,
+                    (date_start, date_end, top_k),
+                )
+                rows = cur.fetchall()
+            logger.info(
+                "find_events_in_range: %d row(s) between %s and %s",
+                len(rows), date_start.date(), date_end.date(),
+            )
+            results: List[Dict[str, Any]] = []
+            for row in rows:
+                r = dict(row)
+                results.append({
+                    "entity_type": "event",
+                    "entity_id": r["id"],
+                    "source_id": f"event-{r['id']}",
+                    "score": None,
+                    "text": self._build_content_block(r),
+                    "metadata": {"sorted_by": "date_asc"},
+                })
+            return results
+        except Exception as e:
+            logger.error("find_events_in_range failed: %s", e, exc_info=True)
             return []
 
 

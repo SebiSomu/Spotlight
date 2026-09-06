@@ -7,6 +7,7 @@ from app.geolocation import (
     geocoder,
     LocationIntentResult,
 )
+from app.temporal import extract_date_range
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,11 @@ GEOLOCATION RULES (VERY IMPORTANT — FOLLOW THESE EXACTLY):
 - When the retrieved results are sorted by distance (nearest first), present them in that order. The first item you list should be the closest one.
 - If the context shows the user is very far away from every concert (thousands of km), be honest about it but still helpful. For example: "Right now all the Spotlight shows are in the USA, and the closest one to you in Bucharest is Drake in New York at about 7,950 km — but it's still a great show!"
 - If the user mentions being "in [City]" or "from [City]", reference that city in your reply — for example "Since you're in London..." or "Based on you being in San Francisco...".
+
+TEMPORAL RULES (VERY IMPORTANT — FOLLOW THESE EXACTLY):
+- When the retrieved records are already filtered to a specific time window (e.g., October 2026), just list those events naturally. Do NOT say "I don't have that info."
+- If no events exist in the requested window, say something like "There are no Spotlight shows scheduled for [month/period] right now" and offer to help with other searches.
+- If a "Current date context" line appears at the top of the context block, use it to correctly interpret relative terms like "next month" or "this week".
 
 Spotlight records you may reference (ONLY use facts from these — nothing external).
 If the block says "No direct database records yet" that means nothing was retrieved, so do NOT guess or invent shows — just tell the user you don't have results right now and suggest trying a simpler artist name or city.
@@ -121,6 +127,14 @@ def process_chat_request(
     user_longitude: Optional[float] = None,
 ) -> Dict[str, Any]:
     history = history or []
+
+    # --- Temporal intent ---
+    temporal = extract_date_range(message)
+    date_range = (temporal.start, temporal.end) if temporal.has_range else None
+    if temporal.has_range:
+        logger.info("Temporal intent: %s -> %s (label=%r)", temporal.start, temporal.end, temporal.label)
+
+    # --- Location intent ---
     intent = detect_location_intent(
         message,
         history=history,
@@ -152,20 +166,31 @@ def process_chat_request(
             retrieved_docs = retriever.find_nearest_events(
                 user_lat=user_coords[0],
                 user_lng=user_coords[1],
+                date_range=date_range,
             )
         else:
-            retrieved_docs = retriever.retrieve_relevant_context(message)
+            retrieved_docs = retriever.retrieve_relevant_context(message, date_range=date_range)
+    elif temporal.has_range:
+        # Pure temporal query — no location signal, just filter by date
+        retrieved_docs = retriever.find_events_in_range(
+            date_start=temporal.start,
+            date_end=temporal.end,
+        )
     else:
         retrieved_docs = retriever.retrieve_relevant_context(message)
 
     context_text = _format_context(retrieved_docs)
     logger.info("Retrieved %d docs for query: %r", len(retrieved_docs), message)
 
+    # Inject temporal context so the LLM knows what window was searched
+    from datetime import datetime as _dt
+    now_label = _dt.utcnow().strftime("%B %d, %Y")
+    preamble_parts = [f"Current date context: today is {now_label} (UTC)."]
+    if temporal.has_range:
+        preamble_parts.append(f"Events shown are filtered to: {temporal.label}.")
     if resolved_location_label:
-        context_text = (
-            f"User location context: treating the user as being in/at {resolved_location_label}.\n\n"
-            + context_text
-        )
+        preamble_parts.append(f"User location context: treating the user as being in/at {resolved_location_label}.")
+    context_text = "\n".join(preamble_parts) + "\n\n" + context_text
 
     formatted_system_prompt = SYSTEM_PROMPT.format(context_text=context_text)
 
