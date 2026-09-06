@@ -5,23 +5,36 @@ require "uri"
 class AiChatService
   DEFAULT_AI_SERVICE_URL = ENV.fetch("AI_SERVICE_URL", "http://localhost:8000")
 
-  def self.send_message(message:, history: [])
+  def self.send_message(message:, history: [], user_latitude: nil, user_longitude: nil)
     url = URI.parse("#{DEFAULT_AI_SERVICE_URL}/chat")
 
     http = Net::HTTP.new(url.host, url.port)
     http.read_timeout = 30
     http.open_timeout = 5
 
-    request = Net::HTTP::Post.new(url.path, { "Content-Type" => "application/json" })
-    request.body = {
+    body = {
       message: message,
       history: history
-    }.to_json
+    }
+    if user_latitude.is_a?(Numeric) && user_longitude.is_a?(Numeric)
+      body[:user_latitude] = user_latitude.to_f
+      body[:user_longitude] = user_longitude.to_f
+    end
+
+    request = Net::HTTP::Post.new(url.path, { "Content-Type" => "application/json" })
+    request.body = body.to_json
 
     begin
       response = http.request(request)
       if response.is_a?(Net::HTTPSuccess)
-        JSON.parse(response.body)
+        parsed = JSON.parse(response.body)
+        {
+          "reply" => parsed["reply"],
+          "sources" => parsed["sources"] || [],
+          "needs_browser_geolocation" => !!parsed["needs_browser_geolocation"],
+          "resolved_location" => parsed["resolved_location"],
+          "error" => parsed["error"]
+        }
       else
         { "error" => "AI service returned error (HTTP #{response.code})" }
       end

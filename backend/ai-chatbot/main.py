@@ -36,11 +36,15 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User question or prompt")
     history: Optional[List[ChatMessage]] = Field(default=[], description="Previous conversation turns")
+    user_latitude: Optional[float] = Field(default=None, description="Optional: user's current GPS latitude from the browser")
+    user_longitude: Optional[float] = Field(default=None, description="Optional: user's current GPS longitude from the browser")
 
 
 class ChatResponse(BaseModel):
     reply: str
     sources: List[str] = []
+    needs_browser_geolocation: bool = False
+    resolved_location: Optional[str] = None
 
 
 class IngestResponse(BaseModel):
@@ -88,8 +92,18 @@ def diagnostics_endpoint():
 def chat_endpoint(request: ChatRequest):
     try:
         history_dicts = [h.model_dump() for h in request.history] if request.history else []
-        result = process_chat_request(message=request.message, history=history_dicts)
-        return ChatResponse(reply=result["reply"], sources=result.get("sources", []))
+        result = process_chat_request(
+            message=request.message,
+            history=history_dicts,
+            user_latitude=request.user_latitude,
+            user_longitude=request.user_longitude,
+        )
+        return ChatResponse(
+            reply=result["reply"],
+            sources=result.get("sources", []),
+            needs_browser_geolocation=bool(result.get("needs_browser_geolocation")),
+            resolved_location=result.get("resolved_location"),
+        )
     except Exception as e:
         logger.error("Error handling chat request: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")

@@ -7,11 +7,13 @@ export default function ChatWidget() {
     const [messages, setMessages] = useState<ChatMessageItem[]>([
         {
             role: "assistant",
-            content: "Hi! I'm Spotlight AI ⚡ Your concert and live event assistant. Ask me anything about upcoming shows, venues, or artist lineups!",
+            content: "Hi! I'm Spotlight AI \u26A1 Your concert and live event assistant. Ask me anything about upcoming shows, venues, or artist lineups!",
         },
     ]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [geoFetching, setGeoFetching] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -25,6 +27,39 @@ export default function ChatWidget() {
         }
     }, [messages, isOpen]);
 
+    const requestBrowserLocation = async (): Promise<{ lat: number; lng: number } | null> => {
+        if (typeof window === "undefined" || !("geolocation" in navigator)) {
+            setError("Geolocation is not supported in this browser. Try telling me what city you're in instead!");
+            return null;
+        }
+        setGeoFetching(true);
+        try {
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    (p) => resolve(p),
+                    (err) => reject(err),
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 5 * 60 * 1000 }
+                );
+            });
+            const coords = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+            };
+            setUserCoords(coords);
+            setError(null);
+            return coords;
+        } catch (err: any) {
+            const msg =
+                err?.code === 1
+                    ? "You denied location access. No problem \u2014 just tell me what city you're in instead!"
+                    : "I couldn't get your location from the browser. Try telling me what city you're in instead!";
+            setError(msg);
+            return null;
+        } finally {
+            setGeoFetching(false);
+        }
+    };
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         const trimmed = input.trim();
@@ -32,17 +67,53 @@ export default function ChatWidget() {
 
         setError(null);
         const userMsg: ChatMessageItem = { role: "user", content: trimmed };
-        
-        // Optimistically add user message
+
         const updatedHistory = [...messages, userMsg];
         setMessages(updatedHistory);
         setInput("");
         setIsLoading(true);
 
         try {
-            // Send to Rails backend (which proxies to FastAPI + Groq)
-            const historyForBackend = updatedHistory.slice(-6); // pass last 6 messages for context window
-            const res = await sendChatMessage(trimmed, historyForBackend);
+            const historyForBackend = updatedHistory.slice(-6);
+
+            let currentCoords = userCoords;
+            const looksLikeWhereAmI = /\b(where\s*(?:am|'?r?e?)\s*i\s*(?:right\s*now)?|unde\s+sunt\s*(?:eu|acum)?|use\s*(?:my|the)\s*current\s*location|whats?\s*my\s*(?:current\s*)?location)\b/i.test(
+                trimmed
+            );
+
+            if (looksLikeWhereAmI && !currentCoords) {
+                const fresh = await requestBrowserLocation();
+                if (fresh) currentCoords = fresh;
+            }
+
+            const res = await sendChatMessage(trimmed, historyForBackend, {
+                user_latitude: currentCoords?.lat ?? null,
+                user_longitude: currentCoords?.lng ?? null,
+            });
+
+            if (res.needs_browser_geolocation && !currentCoords) {
+                const fresh = await requestBrowserLocation();
+                if (fresh) {
+                    const retry = await sendChatMessage(trimmed, historyForBackend, {
+                        user_latitude: fresh.lat,
+                        user_longitude: fresh.lng,
+                    });
+                    if (retry.error) {
+                        setError(retry.error);
+                        setMessages((prev) => [
+                            ...prev,
+                            { role: "assistant", content: `\u26A0\uFE0F ${retry.error}` },
+                        ]);
+                    } else {
+                        setMessages((prev) => [
+                            ...prev,
+                            { role: "assistant", content: retry.reply },
+                        ]);
+                    }
+                    setIsLoading(false);
+                    return;
+                }
+            }
 
             if (res.error) {
                 setError(res.error);
@@ -50,15 +121,16 @@ export default function ChatWidget() {
                     ...prev,
                     {
                         role: "assistant",
-                        content: `⚠️ ${res.error}`,
+                        content: `\u26A0\uFE0F ${res.error}`,
                     },
                 ]);
             } else {
+                let replyText = res.reply;
                 setMessages((prev) => [
                     ...prev,
                     {
                         role: "assistant",
-                        content: res.reply,
+                        content: replyText,
                     },
                 ]);
             }
@@ -69,7 +141,7 @@ export default function ChatWidget() {
                 ...prev,
                 {
                     role: "assistant",
-                    content: `⚠️ ${errorMsg}`,
+                    content: `\u26A0\uFE0F ${errorMsg}`,
                 },
             ]);
         } finally {
@@ -81,7 +153,7 @@ export default function ChatWidget() {
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
             {/* Chat Window */}
             {isOpen && (
-                <div className="mb-4 w-[360px] sm:w-[400px] h-[520px] rounded-2xl bg-[#0c0c14]/95 backdrop-blur-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
+                <div className="mb-4 w-[360px] sm:w-[400px] h-[540px] rounded-2xl bg-[#0c0c14]/95 backdrop-blur-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
                     {/* Header */}
                     <div className="px-5 py-4 bg-gradient-to-r from-[#141420] to-[#1a1429] border-b border-white/10 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -91,19 +163,52 @@ export default function ChatWidget() {
                             </div>
                             <div>
                                 <h3 className="text-white font-semibold text-sm tracking-wide">Spotlight AI</h3>
-                                <p className="text-[#a8a3b3] text-xs">Concert & Event Assistant</p>
+                                <p className="text-[#a8a3b3] text-xs">Concert &amp; Event Assistant</p>
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="text-[#a8a3b3] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
-                            aria-label="Close Chat"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={requestBrowserLocation}
+                                disabled={geoFetching || isLoading}
+                                title={
+                                    userCoords
+                                        ? `Using your location (${userCoords.lat.toFixed(2)}, ${userCoords.lng.toFixed(2)})`
+                                        : "Use my current location"
+                                }
+                                className={`relative text-xs h-8 px-2 rounded-lg transition-all flex items-center gap-1
+                                    ${userCoords
+                                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30"
+                                        : "text-[#a8a3b3] hover:text-white hover:bg-white/5 border border-transparent"}
+                                    disabled:opacity-50`}
+                                aria-label="Use my current location"
+                            >
+                                {geoFetching ? (
+                                    <span className="w-2 h-2 rounded-full bg-[#e8a838] animate-pulse" />
+                                ) : (
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                            d="M12 22s8-7.58 8-14a8 8 0 10-16 0c0 6.42 8 14 8 14zm0-18a6 6 0 016 6c0 3.87-4.4 9.41-6 11.31C10.4 19.41 6 13.87 6 10a6 6 0 016-6zm0 8a2 2 0 100-4 2 2 0 000 4z"
+                                        />
+                                    </svg>
+                                )}
+                                <span className="hidden sm:inline text-[10px]">
+                                    {userCoords ? "Geo ON" : "Locate me"}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(false)}
+                                className="text-[#a8a3b3] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
+                                aria-label="Close Chat"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Messages Container */}
@@ -157,7 +262,7 @@ export default function ChatWidget() {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask about concerts, artists, venues..."
+                            placeholder='Ask about concerts, artists, venues... or try "I\u2019m in Miami, closest concert?"'
                             disabled={isLoading}
                             className="flex-1 bg-[#141420] text-white text-sm placeholder-[#6b6575] rounded-xl px-4 py-2.5 border border-white/10 focus:outline-none focus:border-[#e8a838]/60 transition-all disabled:opacity-50"
                         />
@@ -177,6 +282,7 @@ export default function ChatWidget() {
 
             {/* Toggle Button */}
             <button
+                type="button"
                 onClick={() => setIsOpen((prev) => !prev)}
                 className="group relative flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-[#e8a838] via-[#d4942a] to-[#c2185b] text-black font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
                 aria-label="Toggle AI Concert Assistant Chat"

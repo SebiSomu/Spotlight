@@ -1,9 +1,10 @@
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from app.config import settings
 from app.db import ensure_embeddings_table, get_cursor
 from app.embedder import embedder
+from app.geolocation import haversine_distance
 
 logger = logging.getLogger(__name__)
 
@@ -130,9 +131,13 @@ class EventRetriever:
             logger.error("Vector search failed: %s", e, exc_info=True)
             return self._keyword_fallback(query, top_k)
 
-    def _build_content_block(self, row: Dict[str, Any]) -> str:
+    def _build_content_block(
+        self,
+        row: Dict[str, Any],
+        user_coords: Optional[Tuple[float, float]] = None,
+    ) -> str:
         venue_parts = [row["venue_name"] or ""]
-        city = row["venue_city"]
+        city = row.get("venue_city")
         if city:
             venue_parts.append(city)
         venue_str = ", ".join(p for p in venue_parts if p)
@@ -147,6 +152,19 @@ class EventRetriever:
             f"Min price: ${min_price}",
             f"Status: {row.get('status') or ''}",
         ]
+
+        if user_coords is not None:
+            vlat = row.get("venue_latitude")
+            vlng = row.get("venue_longitude")
+            if isinstance(vlat, (int, float)) and isinstance(vlng, (int, float)):
+                km, miles = haversine_distance(user_coords[0], user_coords[1], float(vlat), float(vlng))
+                lines.append(f"Distance from you: ~{km} km (~{miles} miles)")
+            else:
+                dist_km = row.get("distance_km")
+                if isinstance(dist_km, (int, float)):
+                    miles = round(float(dist_km) * 0.6213711922, 1)
+                    lines.append(f"Distance from you: ~{round(float(dist_km),1)} km (~{miles} miles)")
+
         return "\n".join(lines)
 
     def _keyword_fallback(self, query: str, top_k: int) -> List[Dict[str, Any]]:
@@ -245,6 +263,82 @@ class EventRetriever:
             return results
         except Exception as e:
             logger.error("Keyword fallback also failed: %s", e, exc_info=True)
+            return []
+
+    def find_nearest_events(
+        self,
+        user_lat: float,
+        user_lng: float,
+        top_k: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return events sorted by haversine distance from (user_lat, user_lng).
+
+        Uses the venues.latitude / venues.longitude columns. Computes distance
+        directly in SQL and includes it on each returned doc so the LLM can
+        cite exact km/miles to the user.
+        """
+        top_k = top_k or settings.VECTOR_TOP_K
+        self._ensure_ready()
+
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
+                           e.status, e.min_price_cents,
+                           v.name AS venue_name, v.city AS venue_city,
+                           v.latitude AS venue_latitude, v.longitude AS venue_longitude,
+
+                           -- Haversine (great-circle) distance in km
+                           ( 6371.0088 * acos(
+                               LEAST(1.0, GREATEST(-1.0,
+                                   cos(radians(%s)) * cos(radians(COALESCE(v.latitude, 0)))
+                                   * cos(radians(COALESCE(v.longitude, 0)) - radians(%s))
+                                   + sin(radians(%s)) * sin(radians(COALESCE(v.latitude, 0)))
+                               ))
+                             )
+                           ) AS distance_km
+
+                    FROM events e
+                    INNER JOIN venues v ON v.id = e.venue_id
+                    WHERE v.latitude IS NOT NULL AND v.longitude IS NOT NULL
+                      AND e.status = 'published'
+                    ORDER BY distance_km ASC, e.starts_at ASC
+                    LIMIT %s;
+                    """,
+                    (float(user_lat), float(user_lng), float(user_lat), top_k),
+                )
+                rows = cur.fetchall()
+
+            logger.info(
+                "find_nearest_events: %d row(s) returned for (lat=%.4f, lng=%.4f)",
+                len(rows), user_lat, user_lng,
+            )
+
+            results: List[Dict[str, Any]] = []
+            user_coords = (float(user_lat), float(user_lng))
+            for row in rows:
+                r = dict(row)
+                dkm = r.get("distance_km")
+                dkm_v = round(float(dkm), 1) if isinstance(dkm, (int, float)) else None
+                dmiles_v = (
+                    round(dkm_v * 0.6213711922, 1) if dkm_v is not None else None
+                )
+                results.append({
+                    "entity_type": "event",
+                    "entity_id": r["id"],
+                    "source_id": f"event-{r['id']}",
+                    "score": None,
+                    "text": self._build_content_block(r, user_coords=user_coords),
+                    "metadata": {
+                        "distance_km": dkm_v,
+                        "distance_miles": dmiles_v,
+                        "sorted_by": "distance_asc",
+                    },
+                })
+            return results
+        except Exception as e:
+            logger.error("find_nearest_events failed: %s", e, exc_info=True)
             return []
 
 

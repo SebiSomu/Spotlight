@@ -24,12 +24,39 @@ module Api
           []
         end
 
-        result = AiChatService.send_message(message: message, history: history)
+        user_latitude = params[:user_latitude]
+        user_longitude = params[:user_longitude]
+        if user_latitude.respond_to?(:to_f) && user_longitude.respond_to?(:to_f) &&
+           !user_latitude.to_s.strip.empty? && !user_longitude.to_s.strip.empty?
+          user_latitude = user_latitude.to_f
+          user_longitude = user_longitude.to_f
+        else
+          user_latitude = nil
+          user_longitude = nil
+        end
+
+        result = AiChatService.send_message(
+          message: message,
+          history: history,
+          user_latitude: user_latitude,
+          user_longitude: user_longitude,
+        )
 
         if result["error"]
-          render json: { error: result["error"], reply: build_safe_fallback_reply(message), sources: [] }
+          render json: {
+            error: result["error"],
+            reply: build_safe_fallback_reply(message),
+            sources: [],
+            needs_browser_geolocation: false,
+            resolved_location: nil,
+          }
         else
-          render json: result
+          render json: {
+            reply: result["reply"],
+            sources: result["sources"] || [],
+            needs_browser_geolocation: !!result["needs_browser_geolocation"],
+            resolved_location: result["resolved_location"],
+          }
         end
       end
 
@@ -60,7 +87,9 @@ module Api
           error: "Chat service error: #{err.class}",
           debug: Rails.env.development? ? err.message : nil,
           reply: build_safe_fallback_reply(params[:message].to_s),
-          sources: []
+          sources: [],
+          needs_browser_geolocation: false,
+          resolved_location: nil,
         }
       end
     end

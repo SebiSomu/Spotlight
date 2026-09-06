@@ -124,6 +124,13 @@ master.key
 config/credentials/*.key
 
 # =======================================================================
+# Runtime-generated caches
+# =======================================================================
+# Nominatim / OpenStreetMap geocoding on-disk cache (never commit cities coords)
+backend/ai-chatbot/geocode_cache.json
+geocode_cache.json
+
+# =======================================================================
 # Rails & Runtime Files
 # =======================================================================
 /log/*

@@ -6,6 +6,8 @@
             "city": "San Juan",
             "state": "PR",
             "capacity": 35000,
+            "latitude": 18.440900,
+            "longitude": -66.062800,
             "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuMZsTU_KPFa9TR8MgrSAnHv9JkE4LozaOULeYO_-jaQ&s=10"
         },
         {
@@ -14,6 +16,8 @@
             "city": "Miami",
             "state": "FL",
             "capacity": 19600,
+            "latitude": 25.781400,
+            "longitude": -80.186900,
             "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuMZsTU_KPFa9TR8MgrSAnHv9JkE4LozaOULeYO_-jaQ&s=10"
         },
         {
@@ -22,6 +26,8 @@
             "city": "Inglewood",
             "state": "CA",
             "capacity": 70000,
+            "latitude": 33.953500,
+            "longitude": -118.339400,
             "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png/960px-Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png"
         },
         {
@@ -30,6 +36,8 @@
             "city": "Brooklyn",
             "state": "NY",
             "capacity": 19000,
+            "latitude": 40.682600,
+            "longitude": -73.975400,
             "image_url": "https://upload.wikimedia.org/wikipedia/commons/1/15/Drake_at_The_Carter_Effect_2017_%2836818935200%29_%28cropped%29.jpg"
         },
         {
@@ -38,6 +46,8 @@
             "city": "San Francisco",
             "state": "CA",
             "capacity": 18064,
+            "latitude": 37.768000,
+            "longitude": -122.387700,
             "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/c7/BillieEilishO2140725-39_-_54665577407_%28cropped%29.jpg"
         },
         {
@@ -46,6 +56,8 @@
             "city": "East Rutherford",
             "state": "NJ",
             "capacity": 82500,
+            "latitude": 40.813500,
+            "longitude": -74.074300,
             "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/The_Weeknd_Portrait_by_Brian_Ziff.jpg/960px-The_Weeknd_Portrait_by_Brian_Ziff.jpg"
         },
         {
@@ -54,6 +66,8 @@
             "city": "Pasadena",
             "state": "CA",
             "capacity": 90888,
+            "latitude": 34.161300,
+            "longitude": -118.167600,
             "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/ColdplayWembley120925_%28cropped%29.jpg/960px-ColdplayWembley120925_%28cropped%29.jpg"
         }
     ],

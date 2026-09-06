@@ -9,6 +9,10 @@ class Venue < ApplicationRecord
         [city, state].compact_blank.join(", ")
     end
 
+    def coordinates?
+        latitude.present? && longitude.present?
+    end
+
     def as_json_payload
         {
             id: id,
@@ -18,7 +22,9 @@ class Venue < ApplicationRecord
             state: state,
             location: location_display,
             capacity: capacity,
-            image_url: image_url
+            image_url: image_url,
+            latitude: latitude,
+            longitude: longitude
         }
     end
 end

@@ -1,5 +1,7 @@
 require "json"
 require "date"
+require "net/http"
+require "uri"
 
 seeds_file = File.join(__dir__, "data", "seeds_data.json")
 
@@ -11,18 +13,81 @@ end
 raw_data = File.read(seeds_file)
 seeds_data = JSON.parse(raw_data)
 
+module NominatimGeocoder
+  USER_AGENT = "SpotlightAI-Seeder/1.0"
+
+  def self.geocode(address:, city:, state:)
+    query = [address, city, state].compact.reject(&:empty?).join(", ")
+    encoded = URI.encode_www_form_component(query)
+    url = URI("https://nominatim.openstreetmap.org/search?q=#{encoded}&format=json&limit=1")
+
+    req = Net::HTTP::Get.new(url)
+    req["User-Agent"] = USER_AGENT
+    req["Accept"] = "application/json"
+
+    http = Net::HTTP.new(url.host, url.port)
+    http.use_ssl = true
+    http.open_timeout = 8
+    http.read_timeout = 10
+
+    response = http.request(req)
+    return nil unless response.is_a?(Net::HTTPSuccess)
+
+    results = JSON.parse(response.body) rescue nil
+    return nil unless results.is_a?(Array) && results.any?
+
+    first = results.first
+    lat = first["lat"]&.to_f
+    lng = first["lon"]&.to_f
+    return nil unless lat && lng
+
+    [lat, lng]
+  rescue StandardError => e
+    puts "  ! Nominatim lookup failed for #{city}: #{e.message}"
+    nil
+  end
+end
+
 puts "Loading venues from JSON dataset..."
 
 venues_by_name = {}
 seeds_data["venues"].each do |data|
     venue = Venue.find_or_initialize_by(name: data["name"])
-    venue.update!(
+
+    attrs = {
         address: data["address"],
         city: data["city"],
         state: data["state"],
         capacity: data["capacity"],
         image_url: data["image_url"]
-    )
+    }
+
+    if data["latitude"] && data["longitude"]
+      attrs[:latitude] = data["latitude"]
+      attrs[:longitude] = data["longitude"]
+    end
+
+    venue.update!(attrs)
+
+    if venue.latitude.nil? || venue.longitude.nil?
+      print "  Looking up coordinates for #{venue.name} via Nominatim..."
+      coords = NominatimGeocoder.geocode(
+        address: venue.address.to_s,
+        city: venue.city.to_s,
+        state: venue.state.to_s
+      )
+      if coords
+        lat, lng = coords
+        venue.update!(latitude: lat, longitude: lng)
+        puts " OK (#{lat.round(4)}, #{lng.round(4)})"
+      else
+        puts " SKIP (no result; venue #{venue.name} will lack coords)"
+      end
+      sleep 1.1
+    else
+      puts "  Using seed coordinates for #{venue.name} (#{venue.latitude.to_f.round(4)}, #{venue.longitude.to_f.round(4)})"
+    end
+
     venues_by_name[data["name"]] = venue
 end
 
