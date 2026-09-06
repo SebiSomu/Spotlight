@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from app.groq_client import llm_service
 from app.retriever import retriever
@@ -170,24 +171,42 @@ def process_chat_request(
             )
         else:
             retrieved_docs = retriever.retrieve_relevant_context(message, date_range=date_range)
+        temporal_empty = False
     elif temporal.has_range:
         # Pure temporal query — no location signal, just filter by date
         retrieved_docs = retriever.find_events_in_range(
             date_start=temporal.start,
             date_end=temporal.end,
         )
+        if not retrieved_docs:
+            # Nothing in that window — fall back to showing upcoming events
+            retrieved_docs = retriever.find_events_in_range(
+                date_start=datetime.utcnow(),
+                date_end=datetime(2099, 1, 1),
+                top_k=5,
+            )
+            temporal_empty = True
+        else:
+            temporal_empty = False
     else:
         retrieved_docs = retriever.retrieve_relevant_context(message)
+        temporal_empty = False
 
     context_text = _format_context(retrieved_docs)
     logger.info("Retrieved %d docs for query: %r", len(retrieved_docs), message)
 
     # Inject temporal context so the LLM knows what window was searched
-    from datetime import datetime as _dt
-    now_label = _dt.utcnow().strftime("%B %d, %Y")
+    now_label = datetime.utcnow().strftime("%B %d, %Y")
     preamble_parts = [f"Current date context: today is {now_label} (UTC)."]
     if temporal.has_range:
-        preamble_parts.append(f"Events shown are filtered to: {temporal.label}.")
+        if temporal_empty:
+            preamble_parts.append(
+                f"IMPORTANT: No Spotlight events were found in the requested period ({temporal.label}). "
+                f"The records below are the next upcoming shows instead. "
+                f"Tell the user clearly that there are no shows in {temporal.label} and offer these as alternatives."
+            )
+        else:
+            preamble_parts.append(f"Events shown are filtered to: {temporal.label}.")
     if resolved_location_label:
         preamble_parts.append(f"User location context: treating the user as being in/at {resolved_location_label}.")
     context_text = "\n".join(preamble_parts) + "\n\n" + context_text
