@@ -1,6 +1,7 @@
 class TicketType < ApplicationRecord
     belongs_to :event
     has_many :holds, dependent: :destroy
+    has_many :tickets, dependent: :destroy
 
     validates :name, presence: true
     validates :price_cents, numericality: { greater_than_or_equal_to: 0 }

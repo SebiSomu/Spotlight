@@ -135,3 +135,14 @@ seeds_data["events"].each do |data|
 end
 
 puts "Successfully seeded #{Event.count} events with #{total_ticket_types} ticket types from seeds_data.json!"
+
+puts "Seeding default admin user..."
+admin_user = User.find_or_initialize_by(email: "sebisomu@spotlight.com")
+admin_user.first_name = "Sebi"
+admin_user.last_name = "Somu"
+admin_user.role = "admin"
+admin_user.password = "password123"
+admin_user.password_confirmation = "password123"
+admin_user.save!
+puts "Seeded admin user: #{admin_user.email} (Role: #{admin_user.role})"
+

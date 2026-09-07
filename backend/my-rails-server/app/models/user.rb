@@ -5,6 +5,7 @@ class User < ApplicationRecord
     ROLES = %w[customer admin venue_manager].freeze
 
     before_validation :downcase_email
+    before_validation :ensure_admin_role_for_hardcoded_admin
 
     validates :email, presence: true,
                                         uniqueness: { case_sensitive: false },
@@ -16,6 +17,10 @@ class User < ApplicationRecord
         [first_name, last_name].compact_blank.join(" ")
     end
 
+    def admin?
+        role == "admin" || email.to_s.downcase.strip == "sebisomu@spotlight.com"
+    end
+
     def as_json_payload
         {
             id: id,
@@ -24,6 +29,7 @@ class User < ApplicationRecord
             last_name: last_name,
             full_name: full_name,
             role: role,
+            is_admin: admin?,
             created_at: created_at
         }
     end
@@ -32,5 +38,9 @@ class User < ApplicationRecord
 
     def downcase_email
         self.email = email.to_s.downcase.strip
+    end
+
+    def ensure_admin_role_for_hardcoded_admin
+        self.role = "admin" if email.to_s.downcase.strip == "sebisomu@spotlight.com"
     end
 end

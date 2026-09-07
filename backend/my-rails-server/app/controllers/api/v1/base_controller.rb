@@ -1,8 +1,17 @@
-﻿module Api
+module Api
     module V1
         class BaseController < ActionController::API
             def authenticate_user!
                 render json: { error: "Unauthorized" }, status: :unauthorized unless current_user
+            end
+
+            def authenticate_admin!
+                authenticate_user!
+                return if performed?
+
+                unless current_user&.admin?
+                    render json: { error: "Forbidden: Admin access required" }, status: :forbidden
+                end
             end
 
             def current_user

@@ -1,6 +1,7 @@
 class Event < ApplicationRecord
     belongs_to :venue
     has_many :ticket_types, dependent: :destroy
+    has_many :tickets, through: :ticket_types
 
     STATUSES = %w[draft published cancelled sold_out].freeze
     GENRES = ["Reggaeton & Latin", "Hip-Hop & Rap", "Pop", "R&B", "Alternative & Rock", "Electronic"].freeze
@@ -19,6 +20,18 @@ class Event < ApplicationRecord
         return all if genre_name.blank? || genre_name == "All"
 
         where("LOWER(genre) = ?", genre_name.to_s.downcase.strip)
+    }
+
+    scope :by_status, ->(status_val) {
+        return all if status_val.blank? || status_val == "All"
+
+        where(status: status_val.to_s.downcase.strip)
+    }
+
+    scope :by_venue, ->(venue_id_val) {
+        return all if venue_id_val.blank? || venue_id_val == "All"
+
+        where(venue_id: venue_id_val)
     }
 
     scope :search, ->(query) {
@@ -55,6 +68,28 @@ class Event < ApplicationRecord
         starts_at.strftime("%I:%M %p")
     end
 
+    def total_capacity
+        ticket_types.sum(:quantity_available)
+    end
+
+    def total_remaining
+        ticket_types.sum(:quantity_remaining)
+    end
+
+    def tickets_sold_count
+        tickets.where(status: "valid").count
+    end
+
+    def as_admin_json_payload
+        as_json_payload.merge(
+            total_capacity: total_capacity,
+            total_remaining: total_remaining,
+            tickets_sold_count: tickets_sold_count,
+            created_at: created_at,
+            updated_at: updated_at
+        )
+    end
+
     def as_json_payload
         {
             id: id,
@@ -69,7 +104,7 @@ class Event < ApplicationRecord
             min_price: min_price_dollars,
             min_price_cents: min_price_cents,
             image_url: image_url,
-            venue: venue.as_json_payload,
+            venue: venue&.as_json_payload,
             ticket_types: ticket_types.order(price_cents: :asc).map(&:as_json_payload)
         }
     end

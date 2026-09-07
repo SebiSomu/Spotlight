@@ -5,12 +5,31 @@ class Venue < ApplicationRecord
     validates :city, presence: true
     validates :capacity, numericality: { greater_than: 0 }, allow_nil: true
 
+    scope :search, ->(query) {
+        return all if query.blank?
+
+        term = "%#{query.to_s.downcase.strip}%"
+        where("LOWER(name) LIKE :term OR LOWER(city) LIKE :term OR LOWER(state) LIKE :term OR LOWER(address) LIKE :term", term: term)
+    }
+
     def location_display
         [city, state].compact_blank.join(", ")
     end
 
     def coordinates?
         latitude.present? && longitude.present?
+    end
+
+    def events_count
+        events.count
+    end
+
+    def as_admin_json_payload
+        as_json_payload.merge(
+            events_count: events_count,
+            created_at: created_at,
+            updated_at: updated_at
+        )
     end
 
     def as_json_payload

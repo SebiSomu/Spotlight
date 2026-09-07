@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import { sendChatMessage, type ChatMessageItem } from "../api/chat";
 
 export default function ChatWidget() {
@@ -99,7 +99,6 @@ export default function ChatWidget() {
                         user_longitude: fresh.lng,
                     });
                     if (retry.error) {
-                        setError(retry.error);
                         setMessages((prev) => [
                             ...prev,
                             { role: "assistant", content: `\u26A0\uFE0F ${retry.error}` },
@@ -116,7 +115,6 @@ export default function ChatWidget() {
             }
 
             if (res.error) {
-                setError(res.error);
                 setMessages((prev) => [
                     ...prev,
                     {
@@ -250,6 +248,12 @@ export default function ChatWidget() {
                                     <span className="w-2 h-2 rounded-full bg-[#e8a838] animate-bounce [animation-delay:-0.15s]" />
                                     <span className="w-2 h-2 rounded-full bg-[#e8a838] animate-bounce" />
                                 </div>
+                            </div>
+                        )}
+
+                        {error && (
+                            <div className="p-2.5 bg-red-950/40 border border-red-500/20 text-red-300 text-xs rounded-xl">
+                                {error}
                             </div>
                         )}
 

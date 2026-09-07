@@ -8,12 +8,13 @@ import TrendingEvents from "./components/TrendingEvents";
 import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 import ChatWidget from "./components/ChatWidget";
 
 function AppContent() {
-    const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail" | "dashboard">("home");
+    const [currentView, setCurrentView] = useState<"home" | "events" | "event_detail" | "dashboard" | "admin">("home");
     const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
     const handleSelectEvent = (eventId: number) => {
@@ -47,6 +48,11 @@ function AppContent() {
                     <EventsPage onSelectEvent={handleSelectEvent} />
                 ) : currentView === "dashboard" ? (
                     <UserDashboardPage onExploreClick={() => setCurrentView("events")} />
+                ) : currentView === "admin" ? (
+                    <AdminDashboardPage
+                        onNavigateHome={() => setCurrentView("home")}
+                        onSelectEvent={handleSelectEvent}
+                    />
                 ) : selectedEventId ? (
                     <EventDetailPage
                         eventId={selectedEventId}

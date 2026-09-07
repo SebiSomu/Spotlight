@@ -10,10 +10,17 @@ Rails.application.routes.draw do
             end
 
             resources :events, only: [:index, :show]
+            resources :venues, only: [:index, :show]
             resources :holds, only: [:create, :show, :destroy]
             resources :orders, only: [:index, :show, :create]
             post "chat", to: "chat#create"
             post "chat/ingest", to: "chat#ingest"
+
+            namespace :admin do
+                get "stats", to: "stats#index"
+                resources :events
+                resources :venues
+            end
         end
     end
 end

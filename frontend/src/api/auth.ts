@@ -7,6 +7,7 @@ export interface User {
     last_name: string | null;
     full_name: string;
     role: string;
+    is_admin?: boolean;
     created_at: string;
 }
 
