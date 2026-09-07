@@ -54,6 +54,19 @@ class IngestResponse(BaseModel):
     error: Optional[str] = None
 
 
+class SyncItemRequest(BaseModel):
+    id: int = Field(..., description="Entity ID (event_id or venue_id)")
+    action: str = Field(default="upsert", description="'upsert' or 'delete'")
+
+
+class SyncItemResponse(BaseModel):
+    status: str
+    entity_type: str
+    entity_id: int
+    action: str
+    error: Optional[str] = None
+
+
 @app.get("/")
 def read_root():
     diag = llm_service.diagnostics()
@@ -109,6 +122,56 @@ def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")
 
 
+@app.post("/sync/event", response_model=SyncItemResponse)
+def sync_event_endpoint(req: SyncItemRequest):
+    try:
+        from ingest import sync_single_event, delete_event_embedding
+        if req.action == "delete":
+            delete_event_embedding(req.id)
+        else:
+            sync_single_event(req.id)
+        return SyncItemResponse(
+            status="ok",
+            entity_type="event",
+            entity_id=req.id,
+            action=req.action
+        )
+    except Exception as e:
+        logger.error("Failed to sync event %d: %s", req.id, e, exc_info=True)
+        return SyncItemResponse(
+            status="error",
+            entity_type="event",
+            entity_id=req.id,
+            action=req.action,
+            error=str(e)
+        )
+
+
+@app.post("/sync/venue", response_model=SyncItemResponse)
+def sync_venue_endpoint(req: SyncItemRequest):
+    try:
+        from ingest import sync_single_venue, delete_venue_embedding
+        if req.action == "delete":
+            delete_venue_embedding(req.id)
+        else:
+            sync_single_venue(req.id)
+        return SyncItemResponse(
+            status="ok",
+            entity_type="venue",
+            entity_id=req.id,
+            action=req.action
+        )
+    except Exception as e:
+        logger.error("Failed to sync venue %d: %s", req.id, e, exc_info=True)
+        return SyncItemResponse(
+            status="error",
+            entity_type="venue",
+            entity_id=req.id,
+            action=req.action,
+            error=str(e)
+        )
+
+
 @app.post("/ingest", response_model=IngestResponse)
 def trigger_ingestion():
     try:
@@ -139,4 +202,5 @@ def trigger_ingestion():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=settings.PORT, reload=True)
+
 

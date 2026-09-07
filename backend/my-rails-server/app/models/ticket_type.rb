@@ -8,6 +8,8 @@ class TicketType < ApplicationRecord
     validates :quantity_available, numericality: { greater_than_or_equal_to: 0 }
     validates :quantity_remaining, numericality: { greater_than_or_equal_to: 0 }
 
+    after_commit :sync_event_with_ai
+
     def price_dollars
         (price_cents / 100.0).round(2)
     end
@@ -22,5 +24,13 @@ class TicketType < ApplicationRecord
             quantity_remaining: quantity_remaining,
             is_sold_out: quantity_remaining <= 0
         }
+    end
+
+    private
+
+    def sync_event_with_ai
+        AiChatService.sync_event(event_id, action: "upsert") if event_id.present?
+    rescue => e
+        Rails.logger.error("Failed to sync event #{event_id} from ticket type: #{e.message}")
     end
 end

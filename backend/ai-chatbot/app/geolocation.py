@@ -258,19 +258,26 @@ _CITY_FORBIDDEN_EXACT = frozenset({
     "bine", "mers", "dat", "fapt", "tot", "cea", "cel", "mai", "foarte",
     "totusi", "dar", "daca", "deci", "inca", "pana", "fara", "printr", "sub",
     "peste", "intre", "despre", "pana", "ca", "cum", "cand", "unde", "cine",
+    # Music genres, artists, and ticketing terms
+    "hip", "hop", "rap", "hip-hop", "pop", "rock", "jazz", "latin", "reggaeton",
+    "r&b", "rnb", "electronic", "edm", "house", "techno", "metal", "punk", "indie",
+    "country", "classical", "trap", "drill", "dance", "future", "drake",
+    "music", "artist", "artists", "tour", "tours", "festival", "festivals",
+    "cheap", "cheapest", "expensive", "vip", "stage", "live", "stadium", "arena"
 })
 
 _CITY_FORBIDDEN_ANY = frozenset({
     "closest", "nearest", "near", "nearby",
     "concert", "concerts", "show", "shows", "event", "events",
     "ticket", "tickets", "info", "information", "detail", "details",
-    "the",
+    "the", "music", "tour", "genre", "artist",
+    "hip", "hop", "rap", "reggaeton", "pop", "rock", "jazz",
 })
 
 _FALSE_POSITIVE_1WORD_RE = re.compile(
     r"^(?:i'm|i live|i am|i was|sunt|ma|acum|unde|what|which|who|how|when|where|why|"
     r"located|living|based|visiting|coming|travel|travelling|traveling|currently|"
-    r"tell|show|find|looking|want|need|give|just)$",
+    r"tell|show|find|looking|want|need|give|just|hip|hop|rap|future|drake)$",
     re.IGNORECASE | re.UNICODE,
 )
 
@@ -328,24 +335,19 @@ def extract_city_from_message(text: str) -> Optional[str]:
         return None
     candidates: List[str] = []
 
+    # 1. Match explicit location introductory patterns (e.g. "in Chicago", "from Miami", "living in London")
     for pattern in _LOC_FROM_PATTERNS:
         for m in pattern.finditer(text):
             candidate = _trim_city_candidate(m.group(1))
             if _looks_like_city(candidate, strict=False):
                 candidates.append(candidate)
 
-    sentence_parts = re.split(r"(?<=[.!?])\s+|\s*,\s*|\s*;\s*", text or "")
-    for part in sentence_parts:
-        words = part.split()
-        part_candidates: List[str] = []
-        for i in range(len(words)):
-            for j in range(i + 1, min(i + 5, len(words) + 1)):
-                candidate = " ".join(words[i:j])
-                starts_proper = candidate[0].isupper() or not candidate[0].isascii()
-                if _looks_like_city(candidate, strict=True) and starts_proper:
-                    part_candidates.append(candidate)
-        part_candidates.sort(key=lambda c: (-len(c.split()), -len(c)))
-        candidates.extend(part_candidates)
+    # 2. If the entire user message is just a standalone city name (e.g. "Bucharest", "Miami Beach, FL")
+    raw_words = text.strip().split()
+    if 1 <= len(raw_words) <= 4:
+        candidate = _trim_city_candidate(text)
+        if _looks_like_city(candidate, strict=True):
+            candidates.append(candidate)
 
     seen = set()
     ordered: List[str] = []
@@ -356,6 +358,7 @@ def extract_city_from_message(text: str) -> Optional[str]:
         seen.add(k)
         ordered.append(c)
     return ordered[0] if ordered else None
+
 
 
 def is_nearest_query(text: str) -> bool:

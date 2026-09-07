@@ -74,30 +74,35 @@ class EventRetriever:
         if self._ready is False:
             return
         try:
+            from app.db import has_vector_extension
             ensure_embeddings_table(settings.EMBEDDING_DIMENSION)
-            self._ready = True
+            self._ready = has_vector_extension()
+            if not self._ready:
+                logger.info("pgvector not present in DB; using keyword-based SQL retriever.")
         except Exception as e:
             logger.warning("Vector search permanently disabled: %s", e)
             self._ready = False
+
 
     def retrieve_relevant_context(
         self,
         query: str,
         top_k: int = None,
         date_range: Optional[Tuple[datetime, datetime]] = None,
+        user_coords: Optional[Tuple[float, float]] = None,
     ) -> List[Dict[str, Any]]:
         top_k = top_k or settings.VECTOR_TOP_K
         self._ensure_ready()
 
         if not self._ready:
-            logger.warning("Vector DB not ready; falling back to keyword-only search.")
-            return self._keyword_fallback(query, top_k, date_range=date_range)
+            logger.info("Vector DB not ready; using keyword SQL retriever.")
+            return self._keyword_fallback(query, top_k, date_range=date_range, user_coords=user_coords)
 
         try:
             qvec = embedder.embed_one(query)
         except Exception as e:
             logger.error("Failed to embed query: %s", e)
-            return self._keyword_fallback(query, top_k)
+            return self._keyword_fallback(query, top_k, user_coords=user_coords)
 
         try:
             with get_cursor() as cur:
@@ -132,10 +137,10 @@ class EventRetriever:
                 })
             if results:
                 return results
-            return self._keyword_fallback(query, top_k, date_range=date_range)
+            return self._keyword_fallback(query, top_k, date_range=date_range, user_coords=user_coords)
         except Exception as e:
             logger.error("Vector search failed: %s", e, exc_info=True)
-            return self._keyword_fallback(query, top_k, date_range=date_range)
+            return self._keyword_fallback(query, top_k, date_range=date_range, user_coords=user_coords)
 
     def _build_content_block(
         self,
@@ -178,6 +183,7 @@ class EventRetriever:
         query: str,
         top_k: int,
         date_range: Optional[Tuple[datetime, datetime]] = None,
+        user_coords: Optional[Tuple[float, float]] = None,
     ) -> List[Dict[str, Any]]:
         try:
             terms = _extract_search_terms(query)
@@ -195,7 +201,8 @@ class EventRetriever:
                         f"""
                         SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
                                e.status, e.min_price_cents,
-                               v.name AS venue_name, v.city AS venue_city
+                               v.name AS venue_name, v.city AS venue_city,
+                               v.latitude AS venue_latitude, v.longitude AS venue_longitude
                         FROM events e
                         INNER JOIN venues v ON v.id = e.venue_id
                         WHERE 1=1 {date_where}
@@ -213,7 +220,7 @@ class EventRetriever:
                         "entity_id": r["id"],
                         "source_id": f"event-{r['id']}",
                         "score": None,
-                        "text": self._build_content_block(r),
+                        "text": self._build_content_block(r, user_coords=user_coords),
                         "metadata": {},
                     })
                 return results
@@ -253,6 +260,7 @@ class EventRetriever:
                 SELECT e.id, e.title, e.artist, e.genre, e.description, e.starts_at,
                        e.status, e.min_price_cents,
                        v.name AS venue_name, v.city AS venue_city,
+                       v.latitude AS venue_latitude, v.longitude AS venue_longitude,
                        {score_expr} AS match_score
                 FROM events e
                 INNER JOIN venues v ON v.id = e.venue_id
@@ -277,10 +285,11 @@ class EventRetriever:
                     "entity_id": r["id"],
                     "source_id": f"event-{r['id']}",
                     "score": None,
-                    "text": self._build_content_block(r),
+                    "text": self._build_content_block(r, user_coords=user_coords),
                     "metadata": {"match_score": int(r.get("match_score") or 0)},
                 })
             return results
+
         except Exception as e:
             logger.error("Keyword fallback also failed: %s", e, exc_info=True)
             return []

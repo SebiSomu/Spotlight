@@ -163,14 +163,18 @@ def process_chat_request(
         user_coords, location_label = _resolve_user_coordinates(intent)
         resolved_location_label = location_label
 
-        if user_coords is not None and (intent.is_nearest or intent.extracted_city or intent.coords_from_browser):
+        if user_coords is not None and intent.is_nearest:
             retrieved_docs = retriever.find_nearest_events(
                 user_lat=user_coords[0],
                 user_lng=user_coords[1],
                 date_range=date_range,
             )
         else:
-            retrieved_docs = retriever.retrieve_relevant_context(message, date_range=date_range)
+            retrieved_docs = retriever.retrieve_relevant_context(
+                message,
+                date_range=date_range,
+                user_coords=user_coords
+            )
         temporal_empty = False
     elif temporal.has_range:
         # Pure temporal query — no location signal, just filter by date
@@ -191,6 +195,7 @@ def process_chat_request(
     else:
         retrieved_docs = retriever.retrieve_relevant_context(message)
         temporal_empty = False
+
 
     context_text = _format_context(retrieved_docs)
     logger.info("Retrieved %d docs for query: %r", len(retrieved_docs), message)

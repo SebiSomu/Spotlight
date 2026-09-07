@@ -13,6 +13,10 @@ class Event < ApplicationRecord
     validates :status, presence: true, inclusion: { in: STATUSES }
     validates :min_price_cents, numericality: { greater_than_or_equal_to: 0 }
 
+    after_commit :sync_with_ai_chatbot, on: [:create, :update]
+    after_commit :delete_from_ai_chatbot, on: :destroy
+
+
     scope :published, -> { where(status: "published") }
     scope :upcoming, -> { where("starts_at >= ?", Time.current).order(starts_at: :asc) }
 
@@ -107,5 +111,19 @@ class Event < ApplicationRecord
             venue: venue&.as_json_payload,
             ticket_types: ticket_types.order(price_cents: :asc).map(&:as_json_payload)
         }
+    end
+
+    private
+
+    def sync_with_ai_chatbot
+        AiChatService.sync_event(id, action: "upsert")
+    rescue => e
+        Rails.logger.error("Failed to trigger AI sync for event #{id}: #{e.message}")
+    end
+
+    def delete_from_ai_chatbot
+        AiChatService.sync_event(id, action: "delete")
+    rescue => e
+        Rails.logger.error("Failed to trigger AI delete sync for event #{id}: #{e.message}")
     end
 end

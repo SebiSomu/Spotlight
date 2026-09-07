@@ -47,6 +47,69 @@ class AiChatService
     end
   end
 
+  def self.sync_event(event_id, action: "upsert", async: true)
+    return if event_id.blank?
+
+    block = lambda do
+      url = URI.parse("#{DEFAULT_AI_SERVICE_URL}/sync/event")
+      http = Net::HTTP.new(url.host, url.port)
+      http.read_timeout = 30
+      http.open_timeout = 5
+
+      request = Net::HTTP::Post.new(url.path, { "Content-Type" => "application/json" })
+      request.body = { id: event_id.to_i, action: action.to_s }.to_json
+
+      begin
+        response = http.request(request)
+        if response.is_a?(Net::HTTPSuccess)
+          Rails.logger.info("AI Service synced event #{event_id} (#{action})")
+        else
+          Rails.logger.warn("AI Service failed to sync event #{event_id}: HTTP #{response.code}")
+        end
+      rescue => e
+        Rails.logger.error("AI Service sync_event error for event #{event_id}: #{e.message}")
+      end
+    end
+
+    if async
+      Thread.new(&block)
+    else
+      block.call
+    end
+  end
+
+  def self.sync_venue(venue_id, action: "upsert", async: true)
+    return if venue_id.blank?
+
+    block = lambda do
+      url = URI.parse("#{DEFAULT_AI_SERVICE_URL}/sync/venue")
+      http = Net::HTTP.new(url.host, url.port)
+      http.read_timeout = 30
+      http.open_timeout = 5
+
+      request = Net::HTTP::Post.new(url.path, { "Content-Type" => "application/json" })
+      request.body = { id: venue_id.to_i, action: action.to_s }.to_json
+
+      begin
+        response = http.request(request)
+        if response.is_a?(Net::HTTPSuccess)
+          Rails.logger.info("AI Service synced venue #{venue_id} (#{action})")
+        else
+          Rails.logger.warn("AI Service failed to sync venue #{venue_id}: HTTP #{response.code}")
+        end
+      rescue => e
+        Rails.logger.error("AI Service sync_venue error for venue #{venue_id}: #{e.message}")
+      end
+    end
+
+    if async
+      Thread.new(&block)
+    else
+      block.call
+    end
+  end
+
+
   def self.trigger_ingestion
     url = URI.parse("#{DEFAULT_AI_SERVICE_URL}/ingest")
 
@@ -73,3 +136,5 @@ class AiChatService
     end
   end
 end
+
+

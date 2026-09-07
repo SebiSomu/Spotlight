@@ -55,55 +55,74 @@ def get_cursor():
             cursor.close()
 
 
-def ensure_vector_extension() -> None:
+def has_vector_extension() -> bool:
+    try:
+        with get_cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_type WHERE typname = 'vector';")
+            return cur.fetchone() is not None
+    except Exception:
+        return False
+
+
+def ensure_vector_extension() -> bool:
     try:
         with get_cursor() as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         logger.info("pgvector extension ensured.")
+        return True
     except Exception as e:
         logger.warning("Could not ensure pgvector extension: %s", e)
+        return False
 
 
 def ensure_embeddings_table(dimension: int) -> None:
-    ensure_vector_extension()
+    has_ext = ensure_vector_extension() or has_vector_extension()
     try:
         with get_cursor() as cur:
-            cur.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS embeddings (
-                    id BIGSERIAL PRIMARY KEY,
-                    entity_type TEXT NOT NULL,
-                    entity_id BIGINT NOT NULL,
-                    chunk_id TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    metadata JSONB DEFAULT '{{}}'::jsonb,
-                    embedding vector({dimension}),
-                    created_at TIMESTAMPTZ DEFAULT NOW(),
-                    UNIQUE (entity_type, entity_id, chunk_id)
-                );
-                """
-            )
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_embeddings_embedding ON embeddings "
-                "USING hnsw (embedding vector_cosine_ops);"
-            )
+            if has_ext:
+                cur.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS embeddings (
+                        id BIGSERIAL PRIMARY KEY,
+                        entity_type TEXT NOT NULL,
+                        entity_id BIGINT NOT NULL,
+                        chunk_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        metadata JSONB DEFAULT '{{}}'::jsonb,
+                        embedding vector({dimension}),
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        UNIQUE (entity_type, entity_id, chunk_id)
+                    );
+                    """
+                )
+                try:
+                    cur.execute(
+                        "CREATE INDEX IF NOT EXISTS idx_embeddings_embedding ON embeddings "
+                        "USING hnsw (embedding vector_cosine_ops);"
+                    )
+                except Exception as e:
+                    logger.warning("HNSW index not created: %s", e)
+            else:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS embeddings (
+                        id BIGSERIAL PRIMARY KEY,
+                        entity_type TEXT NOT NULL,
+                        entity_id BIGINT NOT NULL,
+                        chunk_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        metadata JSONB DEFAULT '{}'::jsonb,
+                        embedding TEXT,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        UNIQUE (entity_type, entity_id, chunk_id)
+                    );
+                    """
+                )
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_embeddings_entity ON embeddings (entity_type, entity_id);"
             )
-        logger.info("Embeddings table ensured (dimension=%s).", dimension)
+        logger.info("Embeddings table ensured (has_vector=%s, dimension=%s).", has_ext, dimension)
     except Exception as e:
-        msg = str(e)
-        is_vector_unavailable = (
-            "type \"vector\" does not exist" in msg
-            or "extension \"vector\" is not available" in msg
-            or "data type vector does not exist" in msg
-        )
-        if is_vector_unavailable:
-            logger.warning(
-                "Embeddings table unavailable (pgvector extension missing). "
-                "Install pgvector for semantic search, or use keyword-only fallback: %s",
-                msg.splitlines()[0],
-            )
-        else:
-            logger.error("Failed to ensure embeddings table: %s", e)
+        logger.error("Failed to ensure embeddings table: %s", e)
         raise
+

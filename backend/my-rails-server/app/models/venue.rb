@@ -12,6 +12,9 @@ class Venue < ApplicationRecord
         where("LOWER(name) LIKE :term OR LOWER(city) LIKE :term OR LOWER(state) LIKE :term OR LOWER(address) LIKE :term", term: term)
     }
 
+    after_commit :sync_with_ai_chatbot, on: [:create, :update]
+    after_commit :delete_from_ai_chatbot, on: :destroy
+
     def location_display
         [city, state].compact_blank.join(", ")
     end
@@ -45,5 +48,19 @@ class Venue < ApplicationRecord
             latitude: latitude,
             longitude: longitude
         }
+    end
+
+    private
+
+    def sync_with_ai_chatbot
+        AiChatService.sync_venue(id, action: "upsert")
+    rescue => e
+        Rails.logger.error("Failed to trigger AI sync for venue #{id}: #{e.message}")
+    end
+
+    def delete_from_ai_chatbot
+        AiChatService.sync_venue(id, action: "delete")
+    rescue => e
+        Rails.logger.error("Failed to trigger AI delete sync for venue #{id}: #{e.message}")
     end
 end
